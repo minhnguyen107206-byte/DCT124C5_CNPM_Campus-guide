@@ -1,0 +1,35 @@
+@model List<ThongBao>
+@{ ViewData["Title"] = "Thông báo khu vực"; var now = DateTime.UtcNow; }
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h3 class="page-title mb-0">Thông báo theo khu vực</h3>
+    <a asp-action="Create" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Tạo thông báo</a>
+</div>
+<div class="card">
+    <table class="table table-hover mb-0">
+        <thead><tr><th>Tiêu đề</th><th>Mức độ</th><th>Vùng</th><th>Hiệu lực</th><th>Bản dịch</th><th>Trạng thái</th><th class="text-end"></th></tr></thead>
+        <tbody>
+        @foreach (var t in Model)
+        {
+            var active = t.BatDau <= now && t.KetThuc >= now;
+            var expired = t.KetThuc < now;
+            <tr>
+                <td class="fw-semibold">@t.TieuDe<div class="small text-muted">@t.NoiDung</div></td>
+                <td>@if (t.MucDo == "Khan") { <span class="badge bg-danger">Khẩn</span> } else { <span class="badge bg-secondary">Thường</span> }</td>
+                <td class="small">@t.BanKinh m</td>
+                <td class="small">@t.BatDau.ToLocalTime().ToString("dd/MM HH:mm") → @t.KetThuc.ToLocalTime().ToString("dd/MM HH:mm")</td>
+                <td class="small">@string.Join(", ", t.BanDichs.Select(b => b.MaNgonNgu))</td>
+                <td>@if (active) { <span class="badge bg-success">Đang hiệu lực</span> } else if (expired) { <span class="badge bg-dark">Hết hạn</span> } else { <span class="badge bg-info text-dark">Sắp tới</span> }</td>
+                <td class="text-end text-nowrap">
+                    @if (!expired)
+                    {
+                        <a class="btn btn-sm btn-outline-secondary" asp-action="Edit" asp-route-id="@t.MaThongBao"><i class="bi bi-pencil"></i></a>
+                        <form method="post" asp-action="End" asp-route-id="@t.MaThongBao" class="d-inline" onsubmit="return confirm('Kết thúc thông báo ngay?')">
+                            <button class="btn btn-sm btn-outline-danger">Kết thúc</button></form>
+                    }
+                </td>
+            </tr>
+        }
+        @if (Model.Count == 0) { <tr><td colspan="7" class="text-center text-muted p-4">Chưa có thông báo.</td></tr> }
+        </tbody>
+    </table>
+</div>

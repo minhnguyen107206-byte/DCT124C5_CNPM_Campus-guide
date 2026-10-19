@@ -1,0 +1,49 @@
+@model NoticeVm
+@{ ViewData["Title"] = Model.MaThongBao == 0 ? "Tạo thông báo" : "Sửa thông báo"; }
+@section Head { <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" /> }
+<h3 class="page-title">@ViewData["Title"]</h3>
+<form asp-action="Save" method="post" class="card p-4">
+    <input type="hidden" asp-for="MaThongBao" />
+    <div asp-validation-summary="All" class="text-danger small"></div>
+    <div class="row g-3">
+        <div class="col-md-5">
+            <label class="form-label">Tiêu đề (tiếng Việt) *</label><input asp-for="TieuDe" class="form-control" />
+            <label class="form-label mt-2">Nội dung *</label><textarea asp-for="NoiDung" rows="4" class="form-control"></textarea>
+            <div class="row g-2 mt-1">
+                <div class="col-6"><label class="form-label">Bắt đầu</label><input asp-for="BatDau" type="datetime-local" class="form-control" /></div>
+                <div class="col-6"><label class="form-label">Kết thúc</label><input asp-for="KetThuc" type="datetime-local" class="form-control" /></div>
+            </div>
+            <label class="form-label mt-2">Mức độ</label>
+            <select asp-for="MucDo" class="form-select"><option value="Thuong">Thường – hiện khi khách vào vùng</option><option value="Khan">Khẩn – gửi thông báo đẩy ngay cho mọi thiết bị</option></select>
+            <p class="small text-muted mt-2">Tiêu đề và nội dung được tự động dịch sang các ngôn ngữ đang bật khi lưu.</p>
+        </div>
+        <div class="col-md-7">
+            <label class="form-label">Vùng ảnh hưởng * (bấm lên bản đồ để đặt tâm)</label>
+            <div id="map" class="map-picker"></div>
+            <div class="row g-2 mt-1">
+                <div class="col-4"><label class="form-label small">Vĩ độ</label><input asp-for="ViDo" class="form-control form-control-sm" /></div>
+                <div class="col-4"><label class="form-label small">Kinh độ</label><input asp-for="KinhDo" class="form-control form-control-sm" /></div>
+                <div class="col-4"><label class="form-label small">Bán kính (m)</label><input asp-for="BanKinh" type="number" min="20" max="1000" class="form-control form-control-sm" /></div>
+            </div>
+        </div>
+    </div>
+    <div class="mt-4"><button class="btn btn-primary">Lưu</button> <a asp-action="Index" class="btn btn-light">Hủy</a></div>
+</form>
+@section Scripts {
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+    const lat = document.getElementById('ViDo'), lng = document.getElementById('KinhDo'), r = document.getElementById('BanKinh');
+    const num = v => parseFloat(String(v).replace(',', '.'));
+    const start = [num(lat.value) || 10.7598, num(lng.value) || 106.6825];
+    const map = L.map('map').setView(start, 17);
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 20, attribution: '© OpenStreetMap' }).addTo(map);
+    let circle = null;
+    function place(p) {
+        lat.value = p[0].toFixed(6); lng.value = p[1].toFixed(6);
+        if (!circle) circle = L.circle(p, { radius: num(r.value) || 100, color: '#d9534f' }).addTo(map); else circle.setLatLng(p);
+    }
+    if (lat.value) place(start);
+    map.on('click', e => place([e.latlng.lat, e.latlng.lng]));
+    r.addEventListener('input', () => circle && circle.setRadius(num(r.value) || 100));
+</script>
+}
