@@ -8,7 +8,7 @@ CampusGuide là ứng dụng thuyết minh đa ngôn ngữ giúp tân sinh viên
 | Thành viên | MSSV | Phụ trách |
 | --- | --- | --- |
 | Nguyễn Hữu Hoàng Minh | 3124411163 | App mobile phía khách tham quan (UC01–UC08), build iOS |
-| Thắng | … | Backend, database, luồng dịch + sinh audio (UC12–UC17, UC22, UC23) |
+| Nguyễn Ngọc Thắng | 3124411284 | Backend, database, luồng dịch + sinh audio (UC12–UC17, UC22, UC23) |
 | Nguyễn Hải Vương | 3124411353 | Trang Admin, gói offline, thông báo, thống kê (UC09–UC11, UC18–UC21, UC24) |
 
 ---
