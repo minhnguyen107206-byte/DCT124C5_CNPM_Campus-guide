@@ -1,0 +1,12 @@
+@model UserVm
+@{ ViewData["Title"] = Model.MaND == 0 ? "Thêm tài khoản" : "Sửa tài khoản"; }
+<h3 class="page-title">@ViewData["Title"]</h3>
+<form asp-action="Save" method="post" class="card p-4" style="max-width:520px">
+    <input type="hidden" asp-for="MaND" />
+    <div asp-validation-summary="All" class="text-danger small"></div>
+    <label class="form-label">Họ tên *</label><input asp-for="HoTen" class="form-control" />
+    <label class="form-label mt-2">Email *</label><input asp-for="Email" class="form-control" />
+    <label class="form-label mt-2">Vai trò</label><select asp-for="MaVaiTro" asp-items="ViewBag.Roles" class="form-select"></select>
+    @if (Model.MaND == 0) { <p class="small text-muted mt-2 mb-0">Hệ thống tạo mật khẩu tạm và hiển thị sau khi lưu để bạn gửi cho người dùng.</p> }
+    <div class="mt-3"><button class="btn btn-primary">Lưu</button> <a asp-action="Index" class="btn btn-light">Hủy</a></div>
+</form>
