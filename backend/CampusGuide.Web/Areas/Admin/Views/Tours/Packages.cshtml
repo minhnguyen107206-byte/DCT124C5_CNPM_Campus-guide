@@ -1,0 +1,36 @@
+@model List<ReadinessRow>
+@{ Tour tour = ViewBag.Tour; List<GoiOffline> cur = ViewBag.Current; ViewData["Title"] = "Gói offline – " + tour.TenTour; }
+<h3 class="page-title">Gói offline: @tour.TenTour</h3>
+@if (tour.TrangThai != TrangThaiDiem.DaXuatBan) { <div class="alert alert-warning">Tour chưa hiển thị trên app. Hãy xuất bản tour trước khi đóng gói.</div> }
+<form method="post" asp-action="PublishPackage" asp-route-id="@tour.MaTour" class="card p-4">
+    <table class="table">
+        <thead><tr><th></th><th>Ngôn ngữ</th><th>Sẵn sàng</th><th>Điểm còn thiếu (bản dịch đã duyệt + audio)</th></tr></thead>
+        <tbody>
+        @foreach (var r in Model)
+        {
+            <tr>
+                <td><input type="checkbox" class="form-check-input" name="langs" value="@r.Lang" checked="@(r.Missing.Count == 0)" /></td>
+                <td>@r.LangName (@r.Lang)</td>
+                <td>@if (r.Missing.Count == 0) { <span class="badge bg-success">@r.Ready/@r.Total</span> } else { <span class="badge bg-warning text-dark">@r.Ready/@r.Total</span> }</td>
+                <td class="small">@string.Join(", ", r.Missing)</td>
+            </tr>
+        }
+        </tbody>
+    </table>
+    <div class="form-check mb-3"><input class="form-check-input" type="checkbox" name="allowFallback" value="true" id="fb" />
+        <label class="form-check-label" for="fb">Điểm còn thiếu thì dùng ngôn ngữ dự phòng (E1)</label></div>
+    <div><button class="btn btn-primary"><i class="bi bi-box-seam"></i> Xuất bản gói đã chọn</button>
+        <a asp-action="Index" class="btn btn-light">← Danh sách tour</a></div>
+</form>
+<div class="card p-3 mt-3">
+    <h6>Các gói hiện có (giữ 2 phiên bản gần nhất)</h6>
+    <table class="table table-sm mb-0">
+        <thead><tr><th>Ngôn ngữ</th><th>Phiên bản</th><th>Dung lượng</th><th>Ngày xuất bản</th><th>SHA-256</th><th></th></tr></thead>
+        @foreach (var g in cur)
+        {
+            <tr><td>@g.MaNgonNgu</td><td>v@g.PhienBan</td><td>@((g.DungLuong / 1024.0).ToString("0.#")) KB</td>
+                <td>@g.NgayXuatBan.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td><td class="small text-muted">@(g.Checksum.Length > 12 ? g.Checksum[..12] : g.Checksum)…</td>
+                <td><a href="@g.DuongDan">Tải</a></td></tr>
+        }
+    </table>
+</div>

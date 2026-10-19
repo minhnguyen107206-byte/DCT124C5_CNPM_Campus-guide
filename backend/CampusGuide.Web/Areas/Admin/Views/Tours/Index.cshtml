@@ -1,0 +1,40 @@
+@model List<Tour>
+@{ ViewData["Title"] = "Tour"; List<GoiOffline> packs = ViewBag.Packages; }
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h3 class="page-title mb-0">Tour tham quan</h3>
+    <a asp-action="Create" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Thêm tour</a>
+</div>
+<div class="card">
+    <table class="table table-hover mb-0">
+        <thead><tr><th>Tên tour</th><th>Số điểm</th><th>Quãng đường</th><th>Thời lượng</th><th>Gói offline</th><th>Trạng thái</th><th class="text-end">Thao tác</th></tr></thead>
+        <tbody>
+        @foreach (var t in Model)
+        {
+            var mine = packs.Where(p => p.MaTour == t.MaTour).GroupBy(p => p.MaNgonNgu).Select(g => g.OrderByDescending(x => x.PhienBan).First()).ToList();
+            <tr>
+                <td class="fw-semibold">@t.TenTour</td>
+                <td>@t.Diems.Count</td>
+                <td>@t.QuangDuong m</td>
+                <td>~@t.ThoiLuong phút</td>
+                <td>
+                    @foreach (var p in mine) { <span class="badge bg-light text-dark border">@p.MaNgonNgu v@p.PhienBan</span> }
+                    @if (t.CanXuatBanLai) { <span class="badge bg-warning text-dark">Cần xuất bản lại</span> }
+                </td>
+                <td>@Ui.Badge(t.TrangThai)</td>
+                <td class="text-end text-nowrap">
+                    <a class="btn btn-sm btn-outline-secondary" asp-action="Edit" asp-route-id="@t.MaTour"><i class="bi bi-pencil"></i></a>
+                    <a class="btn btn-sm btn-outline-primary" asp-action="Packages" asp-route-id="@t.MaTour" title="Gói offline"><i class="bi bi-box-arrow-down"></i></a>
+                    <form method="post" class="d-inline" action="/admin/tours/publish/@t.MaTour?on=@(t.TrangThai != TrangThaiDiem.DaXuatBan)">
+                        @Html.AntiForgeryToken()
+                        <button class="btn btn-sm btn-outline-success" title="Hiện/ẩn trên app"><i class="bi @(t.TrangThai == TrangThaiDiem.DaXuatBan ? "bi-cloud-slash" : "bi-cloud-upload")"></i></button>
+                    </form>
+                    <form method="post" class="d-inline" asp-action="Hide" asp-route-id="@t.MaTour" onsubmit="return confirm('Ẩn tour này?')">
+                        <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                    </form>
+                </td>
+            </tr>
+        }
+        @if (Model.Count == 0) { <tr><td colspan="7" class="text-center text-muted p-4">Chưa có tour.</td></tr> }
+        </tbody>
+    </table>
+</div>
