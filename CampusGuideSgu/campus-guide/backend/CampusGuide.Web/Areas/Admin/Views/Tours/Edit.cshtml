@@ -1,0 +1,74 @@
+@model TourVm
+@{
+    ViewData["Title"] = Model.MaTour == 0 ? "Thêm tour" : "Sửa tour";
+    List<Diem> points = ViewBag.Points;
+    var chosen = Model.DiemIds.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(int.Parse).ToList();
+}
+<h3 class="page-title">@ViewData["Title"]</h3>
+<form asp-action="Save" method="post" enctype="multipart/form-data" class="card p-4" id="tourForm">
+    <input type="hidden" asp-for="MaTour" /><input type="hidden" asp-for="DiemIds" />
+    <div asp-validation-summary="All" class="text-danger small"></div>
+    <div class="row g-3">
+        <div class="col-md-5">
+            <label class="form-label">Tên tour *</label><input asp-for="TenTour" class="form-control" />
+            <label class="form-label mt-2">Mô tả</label><textarea asp-for="MoTa" rows="4" class="form-control"></textarea>
+            <label class="form-label mt-2">Ảnh bìa</label><input asp-for="Anh" type="file" accept=".jpg,.jpeg,.png" class="form-control" />
+            @if (!string.IsNullOrEmpty(Model.AnhBia)) { <img src="@Model.AnhBia" class="mt-2 rounded" style="max-height:120px" /> }
+        </div>
+        <div class="col-md-7">
+            <div class="row g-2">
+                <div class="col-6">
+                    <label class="form-label">Điểm đã xuất bản (bấm để thêm)</label>
+                    <ul class="list-group" id="avail" style="max-height:380px;overflow:auto">
+                        @foreach (var p in points.Where(p => !chosen.Contains(p.MaDiem)))
+                        {
+                            <li class="list-group-item list-group-item-action" data-id="@p.MaDiem">@p.TenDiem</li>
+                        }
+                    </ul>
+                </div>
+                <div class="col-6">
+                    <label class="form-label">Lộ trình (kéo thả để sắp thứ tự, bấm × để bỏ)</label>
+                    <ol class="list-group list-group-numbered sortable-list" id="route" style="min-height:120px">
+                        @foreach (var id in chosen)
+                        {
+                            var p = points.FirstOrDefault(x => x.MaDiem == id);
+                            if (p == null) { continue; }
+                            <li class="list-group-item d-flex justify-content-between" draggable="true" data-id="@p.MaDiem">@p.TenDiem <span class="text-danger rm" role="button">×</span></li>
+                        }
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="mt-4"><button class="btn btn-primary">Lưu tour</button> <a asp-action="Index" class="btn btn-light">Hủy</a></div>
+</form>
+@section Scripts {
+<script>
+const avail = document.getElementById('avail'), route = document.getElementById('route'), hidden = document.getElementById('DiemIds');
+function sync() { hidden.value = [...route.children].map(li => li.dataset.id).join(','); }
+function makeRouteItem(id, name) {
+    const li = document.createElement('li');
+    li.className = 'list-group-item d-flex justify-content-between'; li.draggable = true; li.dataset.id = id;
+    li.innerHTML = `${name} <span class="text-danger rm" role="button">×</span>`; return li;
+}
+avail.addEventListener('click', e => {
+    const li = e.target.closest('li'); if (!li) return;
+    route.appendChild(makeRouteItem(li.dataset.id, li.textContent.trim())); li.remove(); sync();
+});
+route.addEventListener('click', e => {
+    if (!e.target.classList.contains('rm')) return;
+    const li = e.target.closest('li'); const a = document.createElement('li');
+    a.className = 'list-group-item list-group-item-action'; a.dataset.id = li.dataset.id;
+    a.textContent = li.firstChild.textContent.trim(); avail.appendChild(a); li.remove(); sync();
+});
+let dragging = null;
+route.addEventListener('dragstart', e => { dragging = e.target.closest('li'); dragging.classList.add('dragging'); });
+route.addEventListener('dragend', () => { dragging?.classList.remove('dragging'); dragging = null; sync(); });
+route.addEventListener('dragover', e => {
+    e.preventDefault();
+    const after = [...route.querySelectorAll('li:not(.dragging)')].find(li => e.clientY < li.getBoundingClientRect().top + li.offsetHeight / 2);
+    if (dragging) after ? route.insertBefore(dragging, after) : route.appendChild(dragging);
+});
+document.getElementById('tourForm').addEventListener('submit', sync);
+</script>
+}
