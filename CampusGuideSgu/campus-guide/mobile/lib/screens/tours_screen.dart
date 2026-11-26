@@ -70,7 +70,11 @@ class _ToursScreenState extends State<ToursScreen> {
                   subtitle: Text('${t.pointCount} ${app.t('points')} · ${t.distance} m · ~${t.minutes} ${app.t('min')}'),
                   trailing: _offline.containsKey(t.id)
                       ? Chip(
-                          label: Text((t.packageVersion ?? 0) > _offline[t.id]!.version ? app.t('update') : app.t('downloaded')),
+                          label: Text(
+                            (!_noNet && (_offline[t.id]!.lang != app.lang || (t.packageVersion ?? 0) > _offline[t.id]!.version))
+                                ? app.t('update')
+                                : '${app.t('downloaded')} (${_offline[t.id]!.lang})',
+                          ),
                           visualDensity: VisualDensity.compact,
                         )
                       : null,

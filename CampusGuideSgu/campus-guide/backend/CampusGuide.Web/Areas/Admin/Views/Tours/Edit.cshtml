@@ -49,7 +49,11 @@ function sync() { hidden.value = [...route.children].map(li => li.dataset.id).jo
 function makeRouteItem(id, name) {
     const li = document.createElement('li');
     li.className = 'list-group-item d-flex justify-content-between'; li.draggable = true; li.dataset.id = id;
-    li.innerHTML = `${name} <span class="text-danger rm" role="button">×</span>`; return li;
+    li.appendChild(document.createTextNode(name + ' '));
+    const rm = document.createElement('span');
+    rm.className = 'text-danger rm'; rm.setAttribute('role', 'button'); rm.textContent = '×';
+    li.appendChild(rm);
+    return li;
 }
 avail.addEventListener('click', e => {
     const li = e.target.closest('li'); if (!li) return;

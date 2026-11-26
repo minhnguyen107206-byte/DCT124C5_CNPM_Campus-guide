@@ -30,9 +30,18 @@ class AudioController extends ChangeNotifier {
   // ---- đọc bằng giọng của điện thoại ----
   bool usingTts = false; // bài hiện tại đang đọc bằng giọng của máy
   bool _ttsSpeaking = false;
+  bool _ttsPaused = false;
   double ttsProgress = 0; // 0..1, theo vị trí từ đang đọc
   String _ttsText = '';
+  int _ttsBaseOffset = 0; // vị trí ký tự bắt đầu của lượt speak hiện tại
+  int _ttsOffset = 0; // vị trí ký tự hiện tại đã đọc đến
+  int ttsStart = 0; // vị trí đầu từ đang đọc (tô sáng Karaoke)
+  int ttsEnd = 0; // vị trí cuối từ đang đọc
+  int _playToken = 0; // chống race condition khi cancelHandler bắn trễ lúc chuyển bài
+  int _activeSpeakToken = 0;
   final Stopwatch _ttsWatch = Stopwatch(); // đo thời gian nghe để ghi lượt nghe
+
+  String get ttsSpokenText => _ttsText;
 
   AudioController(this.app) {
     player.playerStateStream.listen((s) {
@@ -77,38 +86,56 @@ class AudioController extends ChangeNotifier {
     } catch (_) {}
 
     tts.setStartHandler(() {
+      if (_activeSpeakToken != _playToken) return;
       _ttsSpeaking = true;
+      _ttsPaused = false;
       _ttsWatch.start();
       notifyListeners();
     });
     tts.setContinueHandler(() {
+      if (_activeSpeakToken != _playToken) return;
       _ttsSpeaking = true;
+      _ttsPaused = false;
       _ttsWatch.start();
       notifyListeners();
     });
     tts.setPauseHandler(() {
+      if (_activeSpeakToken != _playToken) return;
       _ttsSpeaking = false;
+      _ttsPaused = true;
       _ttsWatch.stop();
       notifyListeners();
     });
     tts.setCancelHandler(() {
+      if (_activeSpeakToken != _playToken) return;
       _ttsSpeaking = false;
       _ttsWatch.stop();
       notifyListeners();
     });
     tts.setCompletionHandler(() {
+      if (_activeSpeakToken != _playToken) return;
       _ttsSpeaking = false;
+      _ttsPaused = false;
       _ttsWatch.stop();
+      _ttsOffset = _ttsText.length;
+      ttsStart = _ttsText.length;
+      ttsEnd = _ttsText.length;
       ttsProgress = 1;
       if (current != null && usingTts) _finish();
       notifyListeners();
     });
     tts.setProgressHandler((String text, int start, int end, String word) {
-      if (_ttsText.isEmpty) return;
-      ttsProgress = (end / _ttsText.length).clamp(0.0, 1.0).toDouble();
+      if (_activeSpeakToken != _playToken || _ttsText.isEmpty || !usingTts) return;
+      final absStart = (_ttsBaseOffset + start).clamp(0, _ttsText.length);
+      final absEnd = (_ttsBaseOffset + end).clamp(absStart, _ttsText.length);
+      ttsStart = absStart;
+      ttsEnd = absEnd;
+      _ttsOffset = absEnd;
+      ttsProgress = (_ttsOffset / _ttsText.length).clamp(0.0, 1.0).toDouble();
       notifyListeners();
     });
     tts.setErrorHandler((dynamic message) {
+      if (_activeSpeakToken != _playToken) return;
       _ttsSpeaking = false;
       _ttsWatch.stop();
       error = app.t('cannotPlay');
@@ -121,6 +148,7 @@ class AudioController extends ChangeNotifier {
   /// Phát thuyết minh của một điểm. [source]: QR / GPS / Tour / DanhSach.
   Future<void> playPoint(Point p, {String source = 'DanhSach'}) async {
     if (current != null && current!.id != p.id) _log();
+    _playToken++;
     await tts.stop();
     if (player.playing) await player.pause();
 
@@ -129,12 +157,20 @@ class AudioController extends ChangeNotifier {
     error = null;
     _logged = false;
     usingTts = p.localAudio == null && p.audioUrl == null;
+    _ttsSpeaking = false;
+    _ttsPaused = false;
     ttsProgress = 0;
+    _ttsBaseOffset = 0;
+    _ttsOffset = 0;
+    ttsStart = 0;
+    ttsEnd = 0;
     _ttsWatch.reset();
     notifyListeners();
     try {
       if (usingTts) {
-        await _speak(p);
+        _ttsText = [p.title, p.text].where((s) => s.trim().isNotEmpty).join('. ');
+        if (_ttsText.isEmpty) throw Exception('no text');
+        await _speakFrom(p, 0);
       } else {
         if (p.localAudio != null) {
           await player.setFilePath(p.localAudio!);
@@ -150,12 +186,32 @@ class AudioController extends ChangeNotifier {
     }
   }
 
-  Future<void> _speak(Point p) async {
-    _ttsText = [p.title, p.text].where((s) => s.trim().isNotEmpty).join('. ');
+  Future<void> _speakFrom(Point p, int offset) async {
+    if (_ttsText.isEmpty) {
+      _ttsText = [p.title, p.text].where((s) => s.trim().isNotEmpty).join('. ');
+    }
     if (_ttsText.isEmpty) throw Exception('no text');
+    final clamped = offset.clamp(0, _ttsText.length);
+    var rawRem = _ttsText.substring(clamped);
+    var trimmedRem = rawRem.trimLeft();
+    if (trimmedRem.isEmpty) {
+      _ttsBaseOffset = 0;
+      _ttsOffset = 0;
+      ttsStart = 0;
+      ttsEnd = 0;
+      ttsProgress = 0;
+      trimmedRem = _ttsText;
+    } else {
+      _ttsBaseOffset = clamped + (rawRem.length - trimmedRem.length);
+    }
+    final token = ++_playToken;
+    await tts.stop();
+    if (token != _playToken) return;
+    _activeSpeakToken = token;
+    _ttsPaused = false;
     await tts.setLanguage(ttsLocale(p.lang));
-    await tts.setSpeechRate(0.5 * speed); // 0.5 = tốc độ bình thường của flutter_tts
-    await tts.speak(_ttsText);
+    await tts.setSpeechRate((0.5 * speed).clamp(0.1, 1.0)); // 0.5 = tốc độ bình thường của flutter_tts
+    await tts.speak(trimmedRem);
   }
 
   Future<void> toggle() async {
@@ -168,10 +224,22 @@ class AudioController extends ChangeNotifier {
       return;
     }
     if (_ttsSpeaking) {
-      await tts.pause(); // iOS và Android 8+; đọc tiếp từ chỗ dừng khi bấm phát lại
+      // Dừng và giữ lại _ttsOffset để đọc tiếp đúng chỗ (ổn định trên cả iOS lẫn Android)
+      _playToken++;
+      _ttsSpeaking = false;
+      _ttsPaused = true;
+      _ttsWatch.stop();
+      await tts.stop();
+      notifyListeners();
     } else if (current != null) {
-      if (ttsProgress >= 1) ttsProgress = 0;
-      await _speak(current!);
+      final resumeAt = (_ttsPaused && _ttsOffset > 0 && _ttsOffset < _ttsText.length) ? _ttsOffset : 0;
+      if (resumeAt == 0) {
+        ttsProgress = 0;
+        _ttsOffset = 0;
+        ttsStart = 0;
+        ttsEnd = 0;
+      }
+      await _speakFrom(current!, resumeAt);
     }
   }
 
@@ -192,9 +260,13 @@ class AudioController extends ChangeNotifier {
 
   Future<void> replay() async {
     if (usingTts) {
-      await tts.stop();
       ttsProgress = 0;
-      if (current != null) await _speak(current!);
+      _ttsBaseOffset = 0;
+      _ttsOffset = 0;
+      ttsStart = 0;
+      ttsEnd = 0;
+      _ttsPaused = false;
+      if (current != null) await _speakFrom(current!, 0);
       notifyListeners();
       return;
     }
@@ -205,7 +277,11 @@ class AudioController extends ChangeNotifier {
   Future<void> setSpeed(double s) async {
     speed = s;
     if (usingTts) {
-      await tts.setSpeechRate(0.5 * s); // áp dụng từ lần đọc tiếp theo
+      if (_ttsSpeaking && current != null) {
+        await _speakFrom(current!, _ttsOffset); // áp dụng tốc độ mới ngay từ vị trí hiện tại
+      } else {
+        await tts.setSpeechRate((0.5 * s).clamp(0.1, 1.0));
+      }
     } else {
       await player.setSpeed(s);
     }
@@ -214,10 +290,16 @@ class AudioController extends ChangeNotifier {
 
   Future<void> stop() async {
     _log();
+    _playToken++;
     await tts.stop();
     await player.stop();
     current = null;
     usingTts = false;
+    _ttsSpeaking = false;
+    _ttsPaused = false;
+    ttsStart = 0;
+    ttsEnd = 0;
+    _ttsOffset = 0;
     notifyListeners();
   }
 

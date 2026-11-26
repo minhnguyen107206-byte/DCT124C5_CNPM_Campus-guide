@@ -70,6 +70,31 @@ class Point {
   /// Nghe được: có file audio, hoặc có văn bản để đọc bằng giọng của điện thoại.
   bool get hasAudio => audioUrl != null || localAudio != null || text.trim().isNotEmpty;
 
+  Point copyWith({double? rating, int? ratingCount}) => Point(
+        id: id,
+        name: name,
+        type: type,
+        typeIcon: typeIcon,
+        lat: lat,
+        lng: lng,
+        radius: radius,
+        floor: floor,
+        hours: hours,
+        image: image,
+        qrCode: qrCode,
+        keywords: keywords,
+        title: title,
+        text: text,
+        lang: lang,
+        isFallback: isFallback,
+        audioUrl: audioUrl,
+        audioSeconds: audioSeconds,
+        rating: rating ?? this.rating,
+        ratingCount: ratingCount ?? this.ratingCount,
+        localAudio: localAudio,
+        localImage: localImage,
+      );
+
   factory Point.fromJson(Map<String, dynamic> j, {String? baseDir}) {
     String? local(String? rel) => (baseDir != null && rel != null) ? '$baseDir/$rel' : null;
     return Point(

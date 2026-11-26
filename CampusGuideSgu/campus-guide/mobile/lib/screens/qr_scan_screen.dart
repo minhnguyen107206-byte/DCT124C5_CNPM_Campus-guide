@@ -20,13 +20,18 @@ class QrScanScreen extends StatefulWidget {
 }
 
 class _QrScanScreenState extends State<QrScanScreen> {
-  final _ctrl = MobileScannerController(detectionSpeed: DetectionSpeed.noDuplicates);
+  final _ctrl = MobileScannerController(detectionSpeed: DetectionSpeed.normal);
   bool _busy = false;
 
   Future<void> _onDetect(BarcodeCapture cap) async {
     if (_busy || cap.barcodes.isEmpty) return;
     final raw = cap.barcodes.first.rawValue;
     if (raw == null) return;
+    await _processRaw(raw);
+  }
+
+  Future<void> _processRaw(String raw) async {
+    if (_busy) return;
     _busy = true;
     final app = context.read<AppState>();
     final audio = context.read<AudioController>();
@@ -78,6 +83,31 @@ class _QrScanScreenState extends State<QrScanScreen> {
     Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => PointDetailScreen(point: p!, source: 'QR')));
   }
 
+  Future<void> _manualInput() async {
+    final app = context.read<AppState>();
+    final tc = TextEditingController(text: 'CG0001');
+    final entered = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(app.t('manualQr')),
+        content: TextField(
+          controller: tc,
+          autofocus: true,
+          decoration: InputDecoration(hintText: app.t('manualQrHint'), border: const OutlineInputBorder()),
+          onSubmitted: (v) => Navigator.pop(ctx, v.trim()),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(app.t('cancel'))),
+          FilledButton(onPressed: () => Navigator.pop(ctx, tc.text.trim()), child: Text(app.t('open'))),
+        ],
+      ),
+    );
+    tc.dispose();
+    if (entered != null && entered.isNotEmpty) {
+      await _processRaw(entered);
+    }
+  }
+
   /// Mã điểm = phần cuối của đường dẫn (bỏ ?lang=..., dấu / cuối); QR chỉ chứa mã trần cũng được.
   static String _codeOf(String raw) {
     final s = raw.trim();
@@ -110,14 +140,36 @@ class _QrScanScreenState extends State<QrScanScreen> {
     final app = context.read<AppState>();
     return Scaffold(
       appBar: AppBar(title: Text(app.t('scanQr')), actions: [
+        IconButton(icon: const Icon(Icons.keyboard), tooltip: app.t('manualQr'), onPressed: _manualInput),
         IconButton(icon: const Icon(Icons.flash_on), onPressed: _ctrl.toggleTorch),
       ]),
       body: Stack(alignment: Alignment.center, children: [
-        MobileScanner(controller: _ctrl, onDetect: _onDetect),
-        Container(
-          width: 250,
-          height: 250,
-          decoration: BoxDecoration(border: Border.all(color: Colors.white, width: 3), borderRadius: BorderRadius.circular(16)),
+        MobileScanner(
+          controller: _ctrl,
+          onDetect: _onDetect,
+          errorBuilder: (_, __) => Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                const Icon(Icons.videocam_off_outlined, size: 56, color: Colors.grey),
+                const SizedBox(height: 12),
+                Text(app.t('cameraUnavailable'), textAlign: TextAlign.center),
+                const SizedBox(height: 16),
+                FilledButton.icon(
+                  onPressed: _manualInput,
+                  icon: const Icon(Icons.keyboard),
+                  label: Text(app.t('manualQr')),
+                ),
+              ]),
+            ),
+          ),
+        ),
+        IgnorePointer(
+          child: Container(
+            width: 250,
+            height: 250,
+            decoration: BoxDecoration(border: Border.all(color: Colors.white, width: 3), borderRadius: BorderRadius.circular(16)),
+          ),
         ),
       ]),
     );

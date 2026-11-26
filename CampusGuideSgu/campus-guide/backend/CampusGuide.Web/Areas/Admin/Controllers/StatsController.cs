@@ -27,14 +27,30 @@ public class StatsController : AdminControllerBase
         return View(await _stats.ComputeAsync(f));
     }
 
-    public async Task<IActionResult> Point(int id)
+    public async Task<IActionResult> Point(int id, DateTime? from = null, DateTime? to = null)
     {
         var d = await _db.Diems.FindAsync(id);
         if (d == null) return NotFound();
         ViewBag.Point = d;
-        ViewBag.ByLang = await _db.LuotNghes.Where(l => l.MaDiem == id).GroupBy(l => l.MaNgonNgu)
+        var lq = _db.LuotNghes.AsNoTracking().Where(l => l.MaDiem == id);
+        var rq = _db.DanhGias.AsNoTracking().Where(r => r.MaDiem == id);
+        if (from.HasValue)
+        {
+            var fDate = from.Value.Date;
+            lq = lq.Where(l => l.ThoiGian >= fDate);
+            rq = rq.Where(r => r.ThoiGian >= fDate);
+        }
+        if (to.HasValue)
+        {
+            var tDate = to.Value.Date.AddDays(1);
+            lq = lq.Where(l => l.ThoiGian < tDate);
+            rq = rq.Where(r => r.ThoiGian < tDate);
+        }
+        ViewBag.From = from;
+        ViewBag.To = to;
+        ViewBag.ByLang = await lq.GroupBy(l => l.MaNgonNgu)
             .Select(g => new NameCount(g.Key, g.Count())).ToListAsync();
-        return View(await _db.DanhGias.AsNoTracking().Where(r => r.MaDiem == id).OrderByDescending(r => r.ThoiGian).ToListAsync());
+        return View(await rq.OrderByDescending(r => r.ThoiGian).ToListAsync());
     }
 
     public async Task<IActionResult> Export(StatsFilter f)

@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -27,7 +29,7 @@ class HistoryScreen extends StatelessWidget {
         final h = app.history[i];
         final stars = app.myRatings[h.pointId];
         return ListTile(
-          leading: const CircleAvatar(child: Icon(Icons.history)),
+          leading: _thumb(h.image),
           title: Text(h.name),
           subtitle: Text('${_fmt(h.time)} · ${h.lang}'),
           trailing: stars == null
@@ -35,13 +37,25 @@ class HistoryScreen extends StatelessWidget {
               : Row(mainAxisSize: MainAxisSize.min, children: [const Icon(Icons.star, color: Colors.amber, size: 18), Text(' $stars')]),
           onTap: () async {
             final p = await _resolve(app, h);
-            if (p != null && context.mounted) {
+            if (!context.mounted) return;
+            if (p != null) {
               Navigator.push(context, MaterialPageRoute(builder: (_) => PointDetailScreen(point: p)));
+            } else {
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(app.t('offlinePointMissing'))));
             }
           },
         );
       },
     );
+  }
+
+  static Widget _thumb(String? img) {
+    const fallback = CircleAvatar(child: Icon(Icons.history));
+    if (img == null || img.isEmpty) return fallback;
+    final child = img.startsWith('http://') || img.startsWith('https://')
+        ? Image.network(img, width: 48, height: 48, fit: BoxFit.cover, errorBuilder: (_, __, ___) => fallback)
+        : Image.file(File(img), width: 48, height: 48, fit: BoxFit.cover, errorBuilder: (_, __, ___) => fallback);
+    return ClipRRect(borderRadius: BorderRadius.circular(8), child: child);
   }
 
   static String _fmt(DateTime t) =>
@@ -50,6 +64,9 @@ class HistoryScreen extends StatelessWidget {
   Future<Point?> _resolve(AppState app, HistoryItem h) async {
     final local = app.points.where((p) => p.id == h.pointId);
     if (local.isNotEmpty) return local.first;
+    final offlinePts = await app.offline.allPoints();
+    final offHit = offlinePts.where((p) => p.id == h.pointId);
+    if (offHit.isNotEmpty) return offHit.first;
     try {
       return await app.api.point(h.pointId, app.lang!);
     } catch (_) {

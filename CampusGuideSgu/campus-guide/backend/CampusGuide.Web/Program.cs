@@ -1,6 +1,7 @@
 using CampusGuide.Web.Data;
 using CampusGuide.Web.Models;
 using CampusGuide.Web.Services;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.EntityFrameworkCore;
 
@@ -18,8 +19,10 @@ var provider = cfg["Database:Provider"] ?? "Sqlite";
 var conn = cfg["Database:ConnectionString"] ?? "Data Source=campusguide.db";
 builder.Services.AddDbContext<AppDbContext>(o =>
 {
-    if (provider.Equals("Postgres", StringComparison.OrdinalIgnoreCase)) o.UseNpgsql(conn);
-    else o.UseSqlite(conn);
+    if (provider.Equals("Postgres", StringComparison.OrdinalIgnoreCase))
+        o.UseNpgsql(conn, s => s.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery));
+    else
+        o.UseSqlite(conn, s => s.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery));
 });
 
 // ---------- MVC + xác thực cookie cho trang Admin ----------
@@ -32,6 +35,28 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         o.AccessDeniedPath = "/admin/account/denied";
         o.ExpireTimeSpan = TimeSpan.FromHours(8);
         o.SlidingExpiration = false;
+        // UC21 A2: khi Quản trị viên khóa tài khoản thì hủy ngay các phiên đăng nhập đang hoạt động
+        o.Events = new CookieAuthenticationEvents
+        {
+            OnValidatePrincipal = async ctx =>
+            {
+                var idStr = ctx.Principal?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+                if (!int.TryParse(idStr, out var userId))
+                {
+                    ctx.RejectPrincipal();
+                    await ctx.HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+                    return;
+                }
+                var db = ctx.HttpContext.RequestServices.GetRequiredService<AppDbContext>();
+                var active = await db.NguoiDungs.AsNoTracking()
+                    .AnyAsync(u => u.MaND == userId && u.TrangThai == "HoatDong");
+                if (!active)
+                {
+                    ctx.RejectPrincipal();
+                    await ctx.HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+                }
+            }
+        };
     });
 builder.Services.AddAuthorization(o =>
 {

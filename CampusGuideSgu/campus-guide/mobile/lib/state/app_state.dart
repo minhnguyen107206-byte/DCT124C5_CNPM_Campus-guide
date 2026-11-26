@@ -45,8 +45,9 @@ class AppState extends ChangeNotifier {
   void Function(Notice n)? onNotice;
   Timer? _noticeTimer;
 
-  // ---- lịch sử, đánh giá chờ gửi (UC11) ----
+  // ---- lịch sử, tìm kiếm gần đây, đánh giá chờ gửi (UC03, UC11) ----
   List<HistoryItem> history = [];
+  List<String> recentSearches = [];
   final Map<int, int> myRatings = {};
 
   String t(String key) => tr(lang ?? 'vi', key);
@@ -60,9 +61,13 @@ class AppState extends ChangeNotifier {
     autoNarration = _prefs.getBool('auto') ?? false;
     _seenNotices.addAll((_prefs.getStringList('seenNotices') ?? []).map(int.parse));
     history = (_prefs.getStringList('history') ?? []).map((s) => HistoryItem.fromJson(jsonDecode(s))).toList();
+    recentSearches = List<String>.from(_prefs.getStringList('recentSearches') ?? const []);
     final r = _prefs.getString('myRatings');
     if (r != null) (jsonDecode(r) as Map).forEach((k, v) => myRatings[int.parse(k)] = v);
-    if (lang != null) afterLanguageReady(); // không chặn giao diện khi máy chủ chưa chạy
+    if (lang != null) {
+      loadLanguages(); // tải tên & cờ ngôn ngữ để SettingsScreen hiển thị đầy đủ
+      afterLanguageReady(); // không chặn giao diện khi máy chủ chưa chạy
+    }
   }
 
   // ======================= UC01 =======================
@@ -99,6 +104,7 @@ class AppState extends ChangeNotifier {
       await afterLanguageReady();
     } else {
       await loadPoints();
+      await refreshNotices();
       api.registerDevice(deviceId, code).catchError((_) {});
     }
   }
@@ -121,6 +127,7 @@ class AppState extends ChangeNotifier {
       points = await api.points(lang!);
       offlineMode = false;
       error = null;
+      _flushPendingRatings();
     } catch (_) {
       // E2: dùng dữ liệu các tour đã tải
       points = await offline.allPoints();
@@ -228,10 +235,30 @@ class AppState extends ChangeNotifier {
     _prefs.setStringList('seenNotices', _seenNotices.map((e) => e.toString()).toList());
   }
 
+  // ======================= UC03 – lịch sử tìm kiếm =======================
+  Future<void> addRecentSearch(String q) async {
+    final trimmed = q.trim();
+    if (trimmed.length < 2) return;
+    recentSearches.removeWhere((e) => e.toLowerCase() == trimmed.toLowerCase());
+    recentSearches.insert(0, trimmed);
+    if (recentSearches.length > 8) recentSearches = recentSearches.sublist(0, 8);
+    await _prefs.setStringList('recentSearches', recentSearches);
+    notifyListeners();
+  }
+
+  Future<void> removeRecentSearch(String q) async {
+    recentSearches.remove(q);
+    await _prefs.setStringList('recentSearches', recentSearches);
+    notifyListeners();
+  }
+
   // ======================= UC11 – lịch sử, đánh giá =======================
   Future<void> addHistory(Point p) async {
     history.removeWhere((h) => h.pointId == p.id);
-    history.insert(0, HistoryItem(pointId: p.id, name: p.name, image: p.image, lang: p.lang, time: DateTime.now()));
+    history.insert(
+      0,
+      HistoryItem(pointId: p.id, name: p.name, image: p.localImage ?? p.image, lang: p.lang, time: DateTime.now()),
+    );
     if (history.length > 100) history = history.sublist(0, 100);
     await _prefs.setStringList('history', history.map((h) => jsonEncode(h.toJson())).toList());
     notifyListeners();
@@ -244,16 +271,31 @@ class AppState extends ChangeNotifier {
     myRatings[pointId] = stars;
     await _prefs.setString('myRatings', jsonEncode(myRatings.map((k, v) => MapEntry(k.toString(), v))));
     try {
-      await api.rate(deviceId, pointId, stars, comment);
+      final res = await api.rate(deviceId, pointId, stars, comment);
+      final avg = (res['average'] as num?)?.toDouble();
+      final cnt = (res['count'] as num?)?.toInt();
+      if (avg != null && cnt != null) {
+        final idx = points.indexWhere((p) => p.id == pointId);
+        if (idx >= 0) {
+          points[idx] = points[idx].copyWith(rating: avg, ratingCount: cnt);
+        }
+      }
       notifyListeners();
       return null;
     } on ApiException catch (e) {
       return e.message;
     } catch (_) {
-      // A1: mất mạng → lưu tạm
-      final pending = _prefs.getStringList('pendingRatings') ?? [];
+      // A1: mất mạng → lưu tạm (khử trùng theo pointId)
+      final pending = (_prefs.getStringList('pendingRatings') ?? []).where((s) {
+        try {
+          return jsonDecode(s)['pointId'] != pointId;
+        } catch (_) {
+          return false;
+        }
+      }).toList();
       pending.add(jsonEncode({'pointId': pointId, 'stars': stars, 'comment': comment}));
       await _prefs.setStringList('pendingRatings', pending);
+      notifyListeners();
       return t('savedOffline');
     }
   }
@@ -289,7 +331,10 @@ class AppState extends ChangeNotifier {
     final s = _prefs.getString('tourProgress');
     if (s == null) return null;
     final parts = s.split(':');
-    return int.parse(parts[0]) == tourId ? int.parse(parts[1]) : null;
+    if (parts.length != 2) return null;
+    final id = int.tryParse(parts[0]);
+    final idx = int.tryParse(parts[1]);
+    return id == tourId ? idx : null;
   }
 
   @override

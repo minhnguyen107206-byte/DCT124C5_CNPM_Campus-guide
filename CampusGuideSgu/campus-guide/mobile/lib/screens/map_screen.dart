@@ -27,7 +27,8 @@ class _MapScreenState extends State<MapScreen> {
   Widget build(BuildContext context) {
     final app = context.watch<AppState>();
     final types = app.points.map((p) => p.type).toSet().toList();
-    final shown = app.points.where((p) => _type == null || p.type == _type).toList();
+    final activeType = types.contains(_type) ? _type : null;
+    final shown = app.points.where((p) => activeType == null || p.type == activeType).toList();
     final me = app.position == null ? null : LatLng(app.position!.latitude, app.position!.longitude);
 
     return Stack(children: [
@@ -50,7 +51,7 @@ class _MapScreenState extends State<MapScreen> {
                 point: LatLng(n.lat, n.lng),
                 radius: n.radius.toDouble(),
                 useRadiusInMeter: true,
-                color: Colors.red.withOpacity(0.12),
+                color: Colors.red.withValues(alpha: 0.12),
                 borderColor: Colors.red,
                 borderStrokeWidth: 1,
               ),
@@ -60,8 +61,8 @@ class _MapScreenState extends State<MapScreen> {
                   point: LatLng(p.lat, p.lng),
                   radius: p.radius.toDouble(),
                   useRadiusInMeter: true,
-                  color: Colors.blue.withOpacity(0.08),
-                  borderColor: Colors.blue.withOpacity(0.4),
+                  color: Colors.blue.withValues(alpha: 0.08),
+                  borderColor: Colors.blue.withValues(alpha: 0.4),
                   borderStrokeWidth: 1,
                 ),
           ]),
@@ -104,20 +105,20 @@ class _MapScreenState extends State<MapScreen> {
           child: Row(children: [
             Padding(
               padding: const EdgeInsets.only(right: 6),
-              child: ChoiceChip(label: Text(app.t('all')), selected: _type == null, onSelected: (_) => setState(() => _type = null)),
+              child: ChoiceChip(label: Text(app.t('all')), selected: activeType == null, onSelected: (_) => setState(() => _type = null)),
             ),
             for (final t in types)
               Padding(
                 padding: const EdgeInsets.only(right: 6),
-                child: ChoiceChip(label: Text(t), selected: _type == t, onSelected: (_) => setState(() => _type = t)),
+                child: ChoiceChip(label: Text(t), selected: activeType == t, onSelected: (_) => setState(() => _type = t)),
               ),
           ]),
         ),
       ),
-      // tự động thuyết minh + về vị trí của tôi
+      // tự động thuyết minh + điểm gần nhất + tâm trường + về vị trí của tôi
       Positioned(
         right: 12,
-        bottom: _selected == null ? 88 : 200,
+        bottom: _selected == null ? 88 : 216,
         child: Column(children: [
           FloatingActionButton.small(
             heroTag: 'auto',
@@ -131,6 +132,26 @@ class _MapScreenState extends State<MapScreen> {
               }
             },
             child: const Icon(Icons.hearing),
+          ),
+          const SizedBox(height: 8),
+          FloatingActionButton.small(
+            heroTag: 'nearest',
+            tooltip: app.t('nearestPoint'),
+            onPressed: shown.isEmpty
+                ? null
+                : () {
+                    final nearest = app.sortedByDistance(shown).first;
+                    _map.move(LatLng(nearest.lat, nearest.lng), 19);
+                    setState(() => _selected = nearest);
+                  },
+            child: const Icon(Icons.near_me),
+          ),
+          const SizedBox(height: 8),
+          FloatingActionButton.small(
+            heroTag: 'campus',
+            tooltip: app.t('campusCenter'),
+            onPressed: () => _map.move(_center, 18),
+            child: const Icon(Icons.school),
           ),
           const SizedBox(height: 8),
           FloatingActionButton.small(
@@ -157,7 +178,7 @@ class _MapScreenState extends State<MapScreen> {
         Positioned(
           left: 8,
           right: 8,
-          bottom: 8,
+          bottom: 76,
           child: PointCard(
             point: _selected!,
             distance: app.distanceTo(_selected!),

@@ -84,13 +84,13 @@ class Api {
 
   Future<List<int>> download(String url, void Function(double)? onProgress) async {
     final req = http.Request('GET', Uri.parse(url));
-    final res = await _client.send(req);
+    final res = await _client.send(req).timeout(_timeout);
     if (res.statusCode != 200) throw ApiException('Tải gói lỗi (${res.statusCode})', res.statusCode);
     final total = res.contentLength ?? 0;
     final bytes = <int>[];
-    await for (final chunk in res.stream) {
+    await for (final chunk in res.stream.timeout(const Duration(seconds: 20))) {
       bytes.addAll(chunk);
-      if (total > 0) onProgress?.call(bytes.length / total);
+      if (total > 0) onProgress?.call((bytes.length / total).clamp(0.0, 1.0));
     }
     return bytes;
   }

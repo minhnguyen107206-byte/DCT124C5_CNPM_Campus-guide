@@ -103,12 +103,25 @@ public class PackageService
             Checksum = checksum, DuongDan = url,
         };
         _db.GoiOfflines.Add(goi);
-        tour.CanXuatBanLai = false;
 
         // chỉ giữ 2 phiên bản gần nhất
         var old = await _db.GoiOfflines.Where(g => g.MaTour == maTour && g.MaNgonNgu == lang && g.PhienBan <= version - 2).ToListAsync();
         foreach (var o in old) { _store.Delete(o.DuongDan); _db.GoiOfflines.Remove(o); }
         await _db.SaveChangesAsync();
+
+        // Chỉ tắt cảnh báo "Cần xuất bản lại" khi tất cả các ngôn ngữ đang bật đều đã có gói ở phiên bản mới nhất
+        var activeLangs = await _db.NgonNgus.Where(n => n.KichHoat).Select(n => n.MaNgonNgu).ToListAsync();
+        var latestByLang = await _db.GoiOfflines.Where(g => g.MaTour == maTour)
+            .GroupBy(g => g.MaNgonNgu)
+            .Select(g => new { Lang = g.Key, MaxVer = g.Max(x => x.PhienBan) })
+            .ToListAsync();
+        int highestVer = latestByLang.Count > 0 ? latestByLang.Max(x => x.MaxVer) : version;
+        bool allUpToDate = activeLangs.All(l => latestByLang.Any(x => x.Lang == l && x.MaxVer >= highestVer));
+        if (allUpToDate && tour.CanXuatBanLai)
+        {
+            tour.CanXuatBanLai = false;
+            await _db.SaveChangesAsync();
+        }
         return goi;
     }
 

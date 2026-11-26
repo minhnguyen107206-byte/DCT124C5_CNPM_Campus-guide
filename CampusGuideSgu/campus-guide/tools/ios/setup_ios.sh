@@ -32,6 +32,19 @@ if ! /usr/libexec/PlistBuddy -c "Print :NSLocalNetworkUsageDescription" "$PLIST"
 fi
 plutil -lint "$PLIST"
 
+# 3b. Đảm bảo Podfile có platform :ios >= 15.0 (cần cho mobile_scanner 7+)
+PODFILE="ios/Podfile"
+if [ -f "$PODFILE" ]; then
+  if grep -qE "^[[:space:]]*#?[[:space:]]*platform :ios" "$PODFILE"; then
+    sed -i '' -E "s|^[[:space:]]*#?[[:space:]]*platform :ios.*|platform :ios, '15.0'|" "$PODFILE"
+  else
+    sed -i '' "1i\\
+platform :ios, '15.0'
+" "$PODFILE"
+  fi
+  echo "→ Đã đặt platform :ios, '15.0' trong ios/Podfile"
+fi
+
 # 4. Nhắc .gitignore
 if ! grep -qE '^/?ios/?$' .gitignore 2>/dev/null; then
   echo "⚠  mobile/.gitignore chưa bỏ qua ios/ và android/. Thêm 2 dòng:  /ios/  và  /android/"

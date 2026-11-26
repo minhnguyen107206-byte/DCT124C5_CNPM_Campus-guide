@@ -94,16 +94,21 @@ public class AppApiController : ControllerBase
     [HttpGet("tours")]
     public async Task<IActionResult> Tours([FromQuery] string lang = "vi")
     {
-        var tours = await _db.Tours.AsNoTracking().Include(t => t.Diems)
+        var fb = await _resolver.FallbackLangAsync();
+        var tours = await _db.Tours.AsNoTracking()
+            .Include(t => t.Diems).ThenInclude(td => td.Diem)
             .Where(t => t.TrangThai == TrangThaiDiem.DaXuatBan).ToListAsync();
-        var packs = await _db.GoiOfflines.AsNoTracking().Where(g => g.MaNgonNgu == lang).ToListAsync();
+        var packs = await _db.GoiOfflines.AsNoTracking()
+            .Where(g => g.MaNgonNgu == lang || g.MaNgonNgu == fb).ToListAsync();
         return Ok(tours.Select(t =>
         {
-            var p = packs.Where(g => g.MaTour == t.MaTour).OrderByDescending(g => g.PhienBan).FirstOrDefault();
+            var p = packs.Where(g => g.MaTour == t.MaTour && g.MaNgonNgu == lang).OrderByDescending(g => g.PhienBan).FirstOrDefault()
+                    ?? packs.Where(g => g.MaTour == t.MaTour && g.MaNgonNgu == fb).OrderByDescending(g => g.PhienBan).FirstOrDefault();
             return new
             {
                 id = t.MaTour, name = t.TenTour, description = t.MoTa, cover = ContentResolver.Abs(BaseUrl, t.AnhBia),
-                pointCount = t.Diems.Count, distance = t.QuangDuong, minutes = t.ThoiLuong,
+                pointCount = t.Diems.Count(td => td.Diem != null && td.Diem.TrangThai == TrangThaiDiem.DaXuatBan),
+                distance = t.QuangDuong, minutes = t.ThoiLuong,
                 packageVersion = p?.PhienBan, packageSize = p?.DungLuong,
             };
         }));
@@ -165,11 +170,15 @@ public class AppApiController : ControllerBase
     public async Task<IActionResult> ActiveNotices([FromQuery] string lang = "vi")
     {
         var now = DateTime.UtcNow;
+        var fb = await _resolver.FallbackLangAsync();
         var list = await _db.ThongBaos.AsNoTracking().Include(t => t.BanDichs)
             .Where(t => t.BatDau <= now && t.KetThuc >= now).ToListAsync();
         return Ok(list.Select(t =>
         {
-            var tr = t.BanDichs.FirstOrDefault(b => b.MaNgonNgu == lang);
+            var tr = lang == "vi"
+                ? null
+                : t.BanDichs.FirstOrDefault(b => b.MaNgonNgu == lang)
+                  ?? t.BanDichs.FirstOrDefault(b => b.MaNgonNgu == fb);
             return new
             {
                 id = t.MaThongBao, title = tr?.TieuDe ?? t.TieuDe, body = tr?.NoiDung ?? t.NoiDung,
@@ -185,7 +194,7 @@ public class AppApiController : ControllerBase
     [HttpPost("listens")]
     public async Task<IActionResult> Listen([FromBody] ListenReq r)
     {
-        if (!await _db.Diems.AnyAsync(d => d.MaDiem == r.PointId)) return NotFound();
+        if (!await _db.Diems.AnyAsync(d => d.MaDiem == r.PointId && d.TrangThai == TrangThaiDiem.DaXuatBan)) return NotFound();
         if (!await _db.NgonNgus.AnyAsync(n => n.MaNgonNgu == r.Lang)) return BadRequest(new { message = "Ngôn ngữ không hợp lệ" });
         if (!await EnsureDevice(r.DeviceId)) return BadRequest(new { message = "DeviceId không hợp lệ" });
         var src = new[] { NguonNghe.QR, NguonNghe.GPS, NguonNghe.Tour, NguonNghe.DanhSach }.Contains(r.Source) ? r.Source : NguonNghe.DanhSach;
@@ -202,7 +211,7 @@ public class AppApiController : ControllerBase
     {
         if (r.Stars < 1 || r.Stars > 5) return BadRequest(new { message = "Vui lòng chọn số sao" });
         if ((r.Comment?.Length ?? 0) > 500) return BadRequest(new { message = "Nhận xét tối đa 500 ký tự" });
-        if (!await _db.Diems.AnyAsync(d => d.MaDiem == r.PointId)) return NotFound();
+        if (!await _db.Diems.AnyAsync(d => d.MaDiem == r.PointId && d.TrangThai == TrangThaiDiem.DaXuatBan)) return NotFound();
         if (!await EnsureDevice(r.DeviceId)) return BadRequest(new { message = "DeviceId không hợp lệ" });
         var old = await _db.DanhGias.FirstOrDefaultAsync(x => x.MaThietBi == r.DeviceId && x.MaDiem == r.PointId);
         if (old == null) _db.DanhGias.Add(new DanhGia { MaThietBi = r.DeviceId, MaDiem = r.PointId, SoSao = r.Stars, NhanXet = r.Comment });

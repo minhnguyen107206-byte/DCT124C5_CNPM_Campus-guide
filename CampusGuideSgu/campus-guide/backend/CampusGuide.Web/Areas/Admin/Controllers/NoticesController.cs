@@ -51,6 +51,11 @@ public class NoticesController : AdminControllerBase
         else
         {
             t = await _db.ThongBaos.Include(x => x.BanDichs).FirstOrDefaultAsync(x => x.MaThongBao == vm.MaThongBao) ?? throw new KeyNotFoundException();
+            if (t.KetThuc < DateTime.UtcNow)
+            {
+                Fail("Thông báo đã hết hạn, không sửa được.");
+                return RedirectToAction(nameof(Index));
+            }
             _db.BanDichThongBaos.RemoveRange(t.BanDichs);
         }
         t.TieuDe = vm.TieuDe.Trim(); t.NoiDung = vm.NoiDung.Trim(); t.ViDo = vm.ViDo!.Value; t.KinhDo = vm.KinhDo!.Value;

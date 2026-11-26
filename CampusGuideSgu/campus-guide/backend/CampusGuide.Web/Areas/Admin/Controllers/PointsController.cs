@@ -57,7 +57,7 @@ public class PointsController : AdminControllerBase
     }
 
     [HttpPost]
-    public async Task<IActionResult> Save(PointVm vm, string? ten1)
+    public async Task<IActionResult> Save(PointVm vm)
     {
         // Tên điểm là duy nhất trong CSDL – kể cả điểm đã xoá (ẩn). Thêm mới trùng tên một điểm đã xoá
         // thì dùng lại điểm đó (khôi phục + ghi thông tin mới), giữ nội dung, bản dịch, mã QR, thống kê cũ.
@@ -83,7 +83,7 @@ public class PointsController : AdminControllerBase
         if (revived != null)
         {
             d = revived;
-            d.TrangThai = TrangThaiDiem.Nhap;   
+            d.TrangThai = TrangThaiDiem.Nhap;
         }
         else if (vm.MaDiem == 0)
         {
@@ -100,7 +100,7 @@ public class PointsController : AdminControllerBase
                 tours.ForEach(t => t.CanXuatBanLai = true);
             }
         }
-        d.TenDiem = vm.TenDiem; d.MaLoai = vm.MaLoai;
+        d.TenDiem = ten; d.MaLoai = vm.MaLoai;
         d.ViDo = vm.ViDo ?? throw new InvalidOperationException(); d.KinhDo = vm.KinhDo ?? throw new InvalidOperationException();
         d.BanKinh = vm.BanKinh; d.Tang = vm.Tang; d.GioLamViec = vm.GioLamViec; d.TuKhoa = vm.TuKhoa;
         d.NgayCapNhat = DateTime.UtcNow;
@@ -108,7 +108,9 @@ public class PointsController : AdminControllerBase
         {
             using var ms = new MemoryStream();
             await vm.Anh.CopyToAsync(ms);
-            _store.Delete(d.HinhAnh);
+            if (!string.IsNullOrEmpty(d.HinhAnh) && d.HinhAnh.StartsWith("/media/")
+                && !await _db.Diems.AnyAsync(x => x.MaDiem != d.MaDiem && x.HinhAnh == d.HinhAnh))
+                _store.Delete(d.HinhAnh);
             d.HinhAnh = await _store.SaveAsync(ms.ToArray(), "images", $"{Guid.NewGuid():N}{Path.GetExtension(vm.Anh.FileName).ToLowerInvariant()}");
         }
         await _db.SaveChangesAsync();
@@ -118,9 +120,8 @@ public class PointsController : AdminControllerBase
         return vm.MaDiem == 0 ? RedirectToAction(nameof(ContentEdit), new { id = d.MaDiem }) : RedirectToAction(nameof(Index));
     }
 
-    // A2: xoá hẳn điểm và MỌI dữ liệu dính khoá MaDiem: nội dung + bản dịch (NoiDung), audio của nội dung,
-    // điểm trong tour (Tour_Diem), đánh giá, lượt nghe, lượt truy cập, video gắn với điểm. Không khôi phục được.
-    // E3: điểm đang thuộc tour → trang danh sách hỏi xác nhận; đồng ý (goKhoiTour) thì gỡ điểm khỏi các tour rồi xoá.
+    // UC13 A2: xóa mềm (ẩn) điểm để giữ nguyên dữ liệu thống kê (LuotNghe, DanhGia) và cho phép khôi phục.
+    // E3: điểm đang thuộc tour → trang danh sách hỏi xác nhận; đồng ý (goKhoiTour) thì gỡ điểm khỏi các tour rồi ẩn.
     [HttpPost]
     public async Task<IActionResult> Hide(int id, bool goKhoiTour = false)
     {
@@ -129,7 +130,7 @@ public class PointsController : AdminControllerBase
         var links = await _db.TourDiems.Include(t => t.Tour).Where(t => t.MaDiem == id).ToListAsync();
         if (links.Count > 0 && !goKhoiTour)
         {
-            Fail($"Điểm đang thuộc tour: {string.Join(", ", links.Select(l => l.Tour!.TenTour))}. Bấm xoá lại và xác nhận để gỡ điểm khỏi tour (E3).");
+            Fail($"Điểm đang thuộc tour: {string.Join(", ", links.Select(l => l.Tour!.TenTour))}. Bấm ẩn lại và xác nhận để gỡ điểm khỏi tour (E3).");
             return RedirectToAction(nameof(Index));
         }
 
@@ -156,29 +157,12 @@ public class PointsController : AdminControllerBase
             }
         }
 
-        // Xoá dây chuyền: bảng con trước, bảng cha (Diem) sau – trong một transaction
-        var ten = d.TenDiem;
-        var noiDungIds = await _db.NoiDungs.Where(n => n.MaDiem == id).Select(n => n.MaNoiDung).ToListAsync();
-        var audioFiles = await _db.Audios.Where(a => noiDungIds.Contains(a.MaNoiDung)).Select(a => a.DuongDan).ToListAsync();
-        await using (var tx = await _db.Database.BeginTransactionAsync())
-        {
-            var soAudio = await _db.Audios.Where(a => noiDungIds.Contains(a.MaNoiDung)).ExecuteDeleteAsync();
-            var soNoiDung = await _db.NoiDungs.Where(n => n.MaDiem == id).ExecuteDeleteAsync();
-            await _db.TourDiems.Where(t => t.MaDiem == id).ExecuteDeleteAsync();
-            var soDanhGia = await _db.DanhGias.Where(x => x.MaDiem == id).ExecuteDeleteAsync();
-            var soNghe = await _db.LuotNghes.Where(x => x.MaDiem == id).ExecuteDeleteAsync();
-            var soTruyCap = await _db.LuotTruyCaps.Where(x => x.MaDiem == id).ExecuteDeleteAsync();
-            var soVideo = await _db.Videos.Where(x => x.MaDiem == id).ExecuteDeleteAsync();
-            await _db.Diems.Where(x => x.MaDiem == id).ExecuteDeleteAsync();
-            await tx.CommitAsync();
-            notes.Insert(0, $"{soNoiDung} nội dung/bản dịch, {soAudio} audio, {soDanhGia} đánh giá, {soNghe} lượt nghe, {soTruyCap} lượt truy cập, {soVideo} video");
-        }
-        // Xoá file ảnh và file âm thanh của điểm
-        _store.Delete(d.HinhAnh);
-        foreach (var f in audioFiles) _store.Delete(f);
+        d.TrangThai = TrangThaiDiem.DaAn;
+        d.NgayCapNhat = DateTime.UtcNow;
+        await _db.SaveChangesAsync();
 
-        Success($"Đã xoá hẳn điểm \"{ten}\" cùng dữ liệu liên quan: {string.Join("; ", notes)}." +
-                (links.Count > 0 ? " Nhớ xuất bản lại gói offline của các tour." : ""));
+        var suffix = notes.Count > 0 ? $" Đã gỡ khỏi tour: {string.Join("; ", notes)}. Nhớ xuất bản lại gói offline." : "";
+        Success($"Đã ẩn điểm \"{d.TenDiem}\" (giữ nguyên dữ liệu thống kê; có thể khôi phục ở bộ lọc \"Đã xoá\").{suffix}");
         return RedirectToAction(nameof(Index));
     }
 

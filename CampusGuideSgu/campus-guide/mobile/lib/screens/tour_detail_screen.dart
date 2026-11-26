@@ -65,7 +65,10 @@ class _TourDetailScreenState extends State<TourDetailScreen> {
       _offline = await app.offline.install(app.api, widget.tourId, app.lang!, onProgress: (v) {
         if (mounted) setState(() => _progress = v);
       });
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(app.t('downloaded'))));
+      if (mounted) {
+        final msg = _offline!.isFallback ? app.t('fallbackPackage') : app.t('downloaded');
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+      }
     } on ApiException catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message))); // E1, E3
     } catch (e) {
@@ -81,7 +84,8 @@ class _TourDetailScreenState extends State<TourDetailScreen> {
 
   void _start() {
     final app = context.read<AppState>();
-    final tour = _offline?.tour ?? _tour!;
+    final useOffline = _offline != null && (_fromOffline || _offline!.lang == app.lang);
+    final tour = useOffline ? _offline!.tour : _tour!;
     final saved = app.tourProgress(tour.id);
     if (saved != null && saved > 0 && saved < tour.points.length) {
       showDialog(
@@ -106,7 +110,8 @@ class _TourDetailScreenState extends State<TourDetailScreen> {
   Widget build(BuildContext context) {
     final app = context.watch<AppState>();
     final t = _tour;
-    final hasUpdate = _offline != null && (widget.summary.packageVersion ?? 0) > _offline!.version;
+    final langMismatch = _offline != null && _offline!.lang != app.lang;
+    final hasUpdate = _offline != null && (langMismatch || (widget.summary.packageVersion ?? 0) > _offline!.version);
     return Scaffold(
       appBar: AppBar(title: Text(widget.summary.name)),
       body: t == null
@@ -145,14 +150,21 @@ class _TourDetailScreenState extends State<TourDetailScreen> {
                   if (_progress != null)
                     Column(children: [LinearProgressIndicator(value: _progress), Text('${app.t('downloading')} ${(_progress! * 100).round()}%')])
                   else if (_offline == null || hasUpdate)
-                    OutlinedButton.icon(
-                      onPressed: _fromOffline ? null : _download,
-                      icon: const Icon(Icons.download),
-                      label: Text(hasUpdate ? app.t('update') : app.t('download')),
-                    )
+                    Wrap(spacing: 8, runSpacing: 8, crossAxisAlignment: WrapCrossAlignment.center, children: [
+                      OutlinedButton.icon(
+                        onPressed: _fromOffline ? null : _download,
+                        icon: const Icon(Icons.download),
+                        label: Text(hasUpdate ? app.t('update') : app.t('download')),
+                      ),
+                      if (_offline != null)
+                        TextButton.icon(onPressed: _remove, icon: const Icon(Icons.delete_outline), label: Text(app.t('deleteDownload'))),
+                    ])
                   else
                     Row(children: [
-                      Chip(avatar: const Icon(Icons.offline_pin, size: 18), label: Text('${app.t('downloaded')} v${_offline!.version}')),
+                      Chip(
+                        avatar: const Icon(Icons.offline_pin, size: 18),
+                        label: Text('${app.t('downloaded')} (${_offline!.lang}) v${_offline!.version}'),
+                      ),
                       const Spacer(),
                       TextButton.icon(onPressed: _remove, icon: const Icon(Icons.delete_outline), label: Text(app.t('deleteDownload'))),
                     ]),

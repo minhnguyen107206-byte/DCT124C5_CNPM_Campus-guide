@@ -18,7 +18,7 @@ class PointImage extends StatelessWidget {
     Widget placeholder() => Container(
           width: size,
           height: h,
-          color: TypeIcon.colorFor(point.typeIcon).withOpacity(0.12),
+          color: TypeIcon.colorFor(point.typeIcon).withValues(alpha: 0.12),
           child: Icon(TypeIcon.iconFor(point.typeIcon), color: TypeIcon.colorFor(point.typeIcon), size: h * 0.45),
         );
     if (point.localImage != null) {

@@ -46,14 +46,15 @@
     googleDuong.addTo(map);
     L.control.layers({ 'Google – đường phố': googleDuong, 'Google – vệ tinh': googleVeTinh, 'Bản đồ CARTO': cartoDuong }).addTo(map);
     let marker = null, circle = null;
+    const rad = () => { const v = num(r.value); return Number.isFinite(v) ? v : 30; };
     function place(p) {
         lat.value = p[0].toFixed(6); lng.value = p[1].toFixed(6);
         if (!marker) { marker = L.marker(p, { draggable: true }).addTo(map); marker.on('dragend', e => { const ll = e.target.getLatLng(); place([ll.lat, ll.lng]); }); }
         else marker.setLatLng(p);
-        if (!circle) circle = L.circle(p, { radius: num(r.value) || 30 }).addTo(map); else circle.setLatLng(p);
+        if (!circle) circle = L.circle(p, { radius: rad() }).addTo(map); else circle.setLatLng(p);
     }
     if (lat.value) place(start);
     map.on('click', e => place([e.latlng.lat, e.latlng.lng]));
-    r.addEventListener('input', () => circle && circle.setRadius(num(r.value) || 30));
+    r.addEventListener('input', () => circle && circle.setRadius(rad()));
 </script>
 }

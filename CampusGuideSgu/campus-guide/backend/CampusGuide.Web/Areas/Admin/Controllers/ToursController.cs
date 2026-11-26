@@ -72,6 +72,12 @@ public class ToursController : AdminControllerBase
         if (ids.Count > 30) ModelState.AddModelError(nameof(vm.DiemIds), "Tour tối đa 30 điểm.");
         var notPub = pts.Where(p => p.TrangThai != TrangThaiDiem.DaXuatBan).Select(p => p.TenDiem).ToList();
         if (notPub.Count > 0) ModelState.AddModelError(nameof(vm.DiemIds), "Các điểm chưa xuất bản (E2): " + string.Join(", ", notPub));
+        if (vm.Anh != null)
+        {
+            var ext = Path.GetExtension(vm.Anh.FileName).ToLowerInvariant();
+            if (vm.Anh.Length > 5 * 1024 * 1024 || ext is not (".jpg" or ".jpeg" or ".png" or ".webp"))
+                ModelState.AddModelError(nameof(vm.Anh), "Ảnh bìa phải là JPG/PNG/WEBP và không quá 5 MB");
+        }
         if (!ModelState.IsValid) { await LoadPoints(); return View("Edit", vm); }
 
         Tour t;
@@ -105,8 +111,17 @@ public class ToursController : AdminControllerBase
     [HttpPost]
     public async Task<IActionResult> Publish(int id, bool on = true)
     {
-        var t = await _db.Tours.FindAsync(id);
+        var t = await _db.Tours.Include(x => x.Diems).ThenInclude(td => td.Diem).FirstOrDefaultAsync(x => x.MaTour == id);
         if (t == null) return NotFound();
+        if (on)
+        {
+            int pubCount = t.Diems.Count(td => td.Diem != null && td.Diem.TrangThai == TrangThaiDiem.DaXuatBan);
+            if (pubCount < 2)
+            {
+                Fail("Tour cần ít nhất 2 điểm đã xuất bản trước khi hiển thị lên ứng dụng (E1).");
+                return RedirectToAction(nameof(Index));
+            }
+        }
         t.TrangThai = on ? TrangThaiDiem.DaXuatBan : TrangThaiDiem.Nhap;
         await _db.SaveChangesAsync();
         Success(on ? "Tour đã hiển thị trên ứng dụng." : "Đã ẩn tour khỏi ứng dụng.");

@@ -53,7 +53,7 @@ public class MyMemoryTranslationService : ITranslationService
         if (string.IsNullOrWhiteSpace(text)) return text;
         if (targetLang == "vi") return text;
 
-        var prepared = GlossaryText.Apply(text, glossary);
+        var (prepared, kept) = GlossaryText.Prepare(text, glossary);
         var result = new StringBuilder();
         foreach (var paragraph in prepared.Split('\n'))
         {
@@ -64,7 +64,7 @@ public class MyMemoryTranslationService : ITranslationService
                 parts.Add(await CallAsync(chunk, targetLang));
             result.Append(string.Join(' ', parts));
         }
-        return result.ToString().Trim();
+        return GlossaryText.Restore(result.ToString().Trim(), kept);
     }
 
     private async Task<string> CallAsync(string chunk, string targetLang)
@@ -175,7 +175,8 @@ public class DemoTranslationService : ITranslationService
         Task.FromResult(string.IsNullOrWhiteSpace(text) || targetLang == "vi" ? text : $"[{targetLang}] {GlossaryText.Apply(text, glossary)}");
 }
 
-/// <summary>Thay thuật ngữ bằng bản dịch chuẩn (cụm dài trước để tránh thay chồng).</summary>
+/// <summary>Thay thuật ngữ bằng bản dịch chuẩn (cụm dài trước để tránh thay chồng).
+/// Quy tắc UC23: bản dịch để trống nghĩa là giữ nguyên tên gốc tiếng Việt khi dịch.</summary>
 public static class GlossaryText
 {
     public static string Apply(string text, IReadOnlyDictionary<string, string>? glossary)
@@ -184,6 +185,35 @@ public static class GlossaryText
         foreach (var (term, tr) in glossary.OrderByDescending(g => g.Key.Length))
             if (!string.IsNullOrWhiteSpace(tr))
                 text = Regex.Replace(text, Regex.Escape(term), tr, RegexOptions.IgnoreCase);
+        return text;
+    }
+
+    public static (string Prepared, Dictionary<string, string> Kept) Prepare(string text, IReadOnlyDictionary<string, string>? glossary)
+    {
+        var kept = new Dictionary<string, string>();
+        if (glossary == null) return (text, kept);
+        int idx = 0;
+        foreach (var (term, tr) in glossary.OrderByDescending(g => g.Key.Length))
+        {
+            if (string.IsNullOrWhiteSpace(term)) continue;
+            if (!string.IsNullOrWhiteSpace(tr))
+            {
+                text = Regex.Replace(text, Regex.Escape(term), tr, RegexOptions.IgnoreCase);
+            }
+            else if (Regex.IsMatch(text, Regex.Escape(term), RegexOptions.IgnoreCase))
+            {
+                var token = $"CGKEEP{idx++}Z";
+                kept[token] = term;
+                text = Regex.Replace(text, Regex.Escape(term), token, RegexOptions.IgnoreCase);
+            }
+        }
+        return (text, kept);
+    }
+
+    public static string Restore(string text, IReadOnlyDictionary<string, string> kept)
+    {
+        foreach (var (token, original) in kept)
+            text = Regex.Replace(text, Regex.Escape(token), original, RegexOptions.IgnoreCase);
         return text;
     }
 }

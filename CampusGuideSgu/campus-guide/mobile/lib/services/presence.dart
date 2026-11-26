@@ -17,6 +17,7 @@ class PresenceReporter with WidgetsBindingObserver {
   Timer? _timer;
   bool _lastListening = false;
   int? _lastPoint;
+  bool _inFlight = false;
 
   PresenceReporter(this.app, this.audio);
 
@@ -39,13 +40,15 @@ class PresenceReporter with WidgetsBindingObserver {
 
   void _ping() {
     final lang = app.lang;
-    if (lang == null) return; // chưa chọn ngôn ngữ (màn hình đầu)
+    if (lang == null || app.offlineMode || _inFlight) return;
+    _inFlight = true;
     _lastListening = audio.playing;
     _lastPoint = audio.current?.id;
     app.api
         .presencePing(app.deviceId, _pageId, audio.current?.id, lang, audio.playing,
             Platform.isIOS ? 'iPhone (app)' : Platform.isAndroid ? 'Android (app)' : 'App')
-        .catchError((_) {});
+        .catchError((_) {})
+        .whenComplete(() => _inFlight = false);
   }
 
   @override

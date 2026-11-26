@@ -54,18 +54,16 @@
                                 title="@(d.TrangThai == TrangThaiDiem.DaXuatBan ? "Gỡ xuất bản" : "Xuất bản")"><i class="bi @(d.TrangThai == TrangThaiDiem.DaXuatBan ? "bi-cloud-slash" : "bi-cloud-upload")"></i></button>
                         var tours = inTours.GetValueOrDefault(d.MaDiem);
                         var hoi = tours == null
-                            ? $"Xoá HẲN \"{d.TenDiem}\"?\n\nSẽ xoá luôn mọi dữ liệu gắn với điểm: nội dung và bản dịch, audio, đánh giá, lượt nghe, lượt truy cập, video.\nKhông khôi phục được."
-                            : $"\"{d.TenDiem}\" đang thuộc tour: {string.Join(", ", tours)}.\n\nXoá sẽ GỠ điểm khỏi tour (tour tự tính lại quãng đường, cần xuất bản lại gói offline) và xoá HẲN mọi dữ liệu gắn với điểm (nội dung, bản dịch, audio, đánh giá, lượt nghe, lượt truy cập, video).\nKhông khôi phục được. Tiếp tục?";
+                            ? $"Ẩn điểm \"{d.TenDiem}\"?\n\nĐiểm sẽ không hiện trên ứng dụng nhưng vẫn giữ nguyên dữ liệu thống kê và có thể khôi phục trong mục \"Đã xoá\"."
+                            : $"\"{d.TenDiem}\" đang thuộc tour: {string.Join(", ", tours)}.\n\nẨn điểm sẽ GỠ điểm khỏi tour (tour tự tính lại quãng đường, cần xuất bản lại gói offline) nhưng vẫn giữ nguyên thống kê và có thể khôi phục sau. Tiếp tục?";
                         var hideUrl = $"/admin/points/hide/{d.MaDiem}" + (tours == null ? "" : "?goKhoiTour=true");
                         <button class="btn btn-sm btn-outline-danger" formmethod="post" formaction="@hideUrl"
-                                data-confirm="@hoi" onclick="return confirm(this.dataset.confirm)" title="Xoá"><i class="bi bi-trash"></i></button>
+                                data-confirm="@hoi" onclick="return confirm(this.dataset.confirm)" title="Ẩn (xoá mềm)"><i class="bi bi-trash"></i></button>
                     }
                     else
                     {
                         <button class="btn btn-sm btn-outline-success" formmethod="post" formaction="/admin/points/restore/@d.MaDiem"
                                 title="Khôi phục"><i class="bi bi-arrow-counterclockwise"></i> Khôi phục</button>
-                        <button class="btn btn-sm btn-outline-danger" formmethod="post" formaction="/admin/points/hide/@d.MaDiem?goKhoiTour=true"
-                                data-confirm="Xoá HẲN &quot;@d.TenDiem&quot; cùng mọi dữ liệu liên quan? Không khôi phục được." onclick="return confirm(this.dataset.confirm)" title="Xoá hẳn"><i class="bi bi-trash"></i></button>
                     }
                 </td>
             </tr>

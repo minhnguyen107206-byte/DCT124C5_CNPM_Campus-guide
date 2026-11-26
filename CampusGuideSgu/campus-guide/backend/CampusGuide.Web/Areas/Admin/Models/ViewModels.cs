@@ -68,8 +68,8 @@ public class NoticeVm
     public int MaThongBao { get; set; }
     [Required(ErrorMessage = "Nhập tiêu đề"), MaxLength(200)] public string TieuDe { get; set; } = "";
     [Required(ErrorMessage = "Nhập nội dung"), MaxLength(1000)] public string NoiDung { get; set; } = "";
-    [Required(ErrorMessage = "Vẽ vùng trên bản đồ")] public decimal? ViDo { get; set; }
-    [Required(ErrorMessage = "Vẽ vùng trên bản đồ")] public decimal? KinhDo { get; set; }
+    [Required(ErrorMessage = "Vẽ vùng trên bản đồ"), Range(-90, 90, ErrorMessage = "Vĩ độ không hợp lệ")] public decimal? ViDo { get; set; }
+    [Required(ErrorMessage = "Vẽ vùng trên bản đồ"), Range(-180, 180, ErrorMessage = "Kinh độ không hợp lệ")] public decimal? KinhDo { get; set; }
     [Range(20, 1000, ErrorMessage = "Bán kính từ 20 đến 1.000 m")] public int BanKinh { get; set; } = 100;
     public string MucDo { get; set; } = "Thuong";
     public DateTime BatDau { get; set; } = DateTime.Now;

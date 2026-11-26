@@ -13,7 +13,8 @@ class OfflineTour {
   final String lang;
   final int version;
   final Tour tour;
-  OfflineTour(this.tourId, this.lang, this.version, this.tour);
+  final bool isFallback;
+  OfflineTour(this.tourId, this.lang, this.version, this.tour, {this.isFallback = false});
 }
 
 /// UC09 – Tải gói offline (zip: tour.json + audio + ảnh), kiểm tra SHA-256, giải nén vào bộ nhớ máy.
@@ -61,7 +62,7 @@ class OfflineStore {
       pointCount: pts.length,
       points: pts,
     );
-    return OfflineTour(tour.id, m['lang'], m['version'], tour);
+    return OfflineTour(tour.id, m['lang'], m['version'], tour, isFallback: m['isFallback'] == true);
   }
 
   /// Tải và cài gói. Ném ApiException khi lỗi; [onProgress] 0..1.
@@ -85,7 +86,11 @@ class OfflineStore {
         await out.writeAsBytes(file.content as List<int>);
       }
     }
-    await File('${d.path}/meta.json').writeAsString(jsonEncode({'lang': info['lang'], 'version': info['version']}));
+    await File('${d.path}/meta.json').writeAsString(jsonEncode({
+      'lang': info['lang'],
+      'version': info['version'],
+      'isFallback': info['isFallback'] == true,
+    }));
     return (await _load(d))!;
   }
 

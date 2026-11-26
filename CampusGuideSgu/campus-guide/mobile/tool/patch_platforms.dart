@@ -29,8 +29,12 @@ void _android() {
   }
   // Android 11+: flutter_tts cần khai báo dịch vụ đọc văn bản (TTS) mới tìm được giọng đọc của máy
   if (!s.contains('android.intent.action.TTS_SERVICE')) {
-    const q = '<queries>\n        <intent>\n            <action android:name="android.intent.action.TTS_SERVICE" />\n        </intent>\n    </queries>\n    ';
-    s = s.replaceFirst('<application', '$q<application');
+    const intent = '<intent>\n            <action android:name="android.intent.action.TTS_SERVICE" />\n        </intent>';
+    if (s.contains('<queries>')) {
+      s = s.replaceFirst('<queries>', '<queries>\n        $intent');
+    } else {
+      s = s.replaceFirst('<application', '<queries>\n        $intent\n    </queries>\n    <application');
+    }
   }
   if (!s.contains('usesCleartextTraffic')) {
     s = s.replaceFirst('<application', '<application\n        android:usesCleartextTraffic="true"');

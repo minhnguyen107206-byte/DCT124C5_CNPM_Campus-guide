@@ -1,6 +1,17 @@
 @model List<DanhGia>
-@{ Diem d = ViewBag.Point; List<NameCount> byLang = ViewBag.ByLang; ViewData["Title"] = "Thống kê – " + d.TenDiem; }
-<h3 class="page-title">@d.TenDiem</h3>
+@{
+    Diem d = ViewBag.Point;
+    List<NameCount> byLang = ViewBag.ByLang;
+    DateTime? from = ViewBag.From;
+    DateTime? to = ViewBag.To;
+    ViewData["Title"] = "Thống kê – " + d.TenDiem;
+}
+<h3 class="page-title">@d.TenDiem
+    @if (from.HasValue || to.HasValue)
+    {
+        <span class="small text-muted fw-normal">(@(from?.ToString("dd/MM/yyyy") ?? "…") – @(to?.ToString("dd/MM/yyyy") ?? "…"))</span>
+    }
+</h3>
 <div class="row g-3">
     <div class="col-md-4"><div class="card p-3"><h6>Lượt nghe theo ngôn ngữ</h6>
         <table class="table table-sm mb-0">@foreach (var r in byLang) { <tr><td>@r.Name</td><td class="text-end">@r.Count</td></tr> }</table></div></div>

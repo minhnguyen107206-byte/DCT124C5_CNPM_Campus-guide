@@ -20,7 +20,7 @@ class PointDetailScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final app = context.watch<AppState>();
     final audio = context.read<AudioController>();
-    final p = point;
+    final p = app.points.firstWhere((x) => x.id == point.id, orElse: () => point);
     return Scaffold(
       appBar: AppBar(title: Text(p.name)),
       bottomNavigationBar: const MiniPlayer(),

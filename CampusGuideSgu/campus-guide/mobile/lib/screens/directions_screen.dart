@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -44,9 +45,10 @@ class _DirectionsScreenState extends State<DirectionsScreen> {
   Future<void> _start() async {
     final app = context.read<AppState>();
     if (!await app.ensureLocationPermission()) {
-      setState(() => _error = app.t('locationDenied')); // E1: chỉ hiển thị vị trí điểm đến
+      if (mounted) setState(() => _error = app.t('locationDenied')); // E1: chỉ hiển thị vị trí điểm đến
       return;
     }
+    if (!mounted) return;
     await app.startLocation();
     Position pos;
     try {
@@ -71,9 +73,12 @@ class _DirectionsScreenState extends State<DirectionsScreen> {
     try {
       final url = Uri.parse('https://routing.openstreetmap.de/routed-foot/route/v1/foot/'
           '${from.longitude},${from.latitude};${_dest.longitude},${_dest.latitude}?overview=full&geometries=geojson');
-      final res = await http.get(url).timeout(const Duration(seconds: 8));
+      final res = await http.get(url, headers: const {'User-Agent': 'CampusGuideSGU/1.0'}).timeout(const Duration(seconds: 8));
+      if (res.statusCode != 200) throw Exception('OSRM ${res.statusCode}');
       final j = jsonDecode(res.body);
-      final r = j['routes'][0];
+      final routes = j['routes'] as List?;
+      if (routes == null || routes.isEmpty) throw Exception('No route');
+      final r = routes[0];
       final coords = (r['geometry']['coordinates'] as List).map((c) => LatLng((c[1] as num).toDouble(), (c[0] as num).toDouble())).toList();
       if (!mounted) return; // người dùng đã thoát màn hình trước khi OSRM trả về
       setState(() {
@@ -120,10 +125,31 @@ class _DirectionsScreenState extends State<DirectionsScreen> {
     }
   }
 
+  /// Khoảng cách nhỏ nhất từ vị trí hiện tại tới các đoạn thẳng của lộ trình (mét).
   double _distanceToRoute(LatLng me) {
+    if (_route.isEmpty) return double.infinity;
+    if (_route.length == 1) {
+      return Geolocator.distanceBetween(me.latitude, me.longitude, _route.first.latitude, _route.first.longitude);
+    }
     double best = double.infinity;
-    for (final pt in _route) {
-      final d = Geolocator.distanceBetween(me.latitude, me.longitude, pt.latitude, pt.longitude);
+    final cosLat = math.cos(me.latitude * math.pi / 180.0);
+    const metersPerDegLat = 111320.0;
+    final metersPerDegLng = metersPerDegLat * cosLat;
+
+    for (var i = 0; i < _route.length - 1; i++) {
+      final a = _route[i];
+      final b = _route[i + 1];
+      final ax = (a.longitude - me.longitude) * metersPerDegLng;
+      final ay = (a.latitude - me.latitude) * metersPerDegLat;
+      final bx = (b.longitude - me.longitude) * metersPerDegLng;
+      final by = (b.latitude - me.latitude) * metersPerDegLat;
+      final dx = bx - ax;
+      final dy = by - ay;
+      final lenSq = dx * dx + dy * dy;
+      final t = lenSq == 0 ? 0.0 : (-(ax * dx + ay * dy) / lenSq).clamp(0.0, 1.0);
+      final px = ax + t * dx;
+      final py = ay + t * dy;
+      final d = math.sqrt(px * px + py * py);
       if (d < best) best = d;
     }
     return best;
@@ -157,7 +183,7 @@ class _DirectionsScreenState extends State<DirectionsScreen> {
                 ),
             ]),
             CircleLayer(circles: [
-              CircleMarker(point: _dest, radius: widget.point.radius.toDouble(), useRadiusInMeter: true, color: Colors.green.withOpacity(0.15)),
+              CircleMarker(point: _dest, radius: widget.point.radius.toDouble(), useRadiusInMeter: true, color: Colors.green.withValues(alpha: 0.15)),
             ]),
             MarkerLayer(markers: [
               Marker(point: _dest, width: 44, height: 44, child: TypeIcon(type: widget.point.typeIcon, selected: true)),

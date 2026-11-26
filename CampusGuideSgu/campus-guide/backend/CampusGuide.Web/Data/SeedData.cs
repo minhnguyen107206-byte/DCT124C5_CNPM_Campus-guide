@@ -55,19 +55,19 @@ public static class SeedData
 
         var mau = new (string ma, LoaiDiem loai, decimal lat, decimal lng, int banKinh, string? tang, string? gio, string tuKhoa, string vanBan)[]
         {
-            ("CG01", cong, 10.759411m, 106.682068m, 35, null, "Mở cửa 06:00–21:00", "cổng, cổng chính, lối vào, bảo vệ, an dương vương",
+            ("CG01", cong, 10.759411m, 106.682068m, 30, null, "Mở cửa 06:00–21:00", "cổng, cổng chính, lối vào, bảo vệ, an dương vương",
                 "Chào mừng bạn đến với Trường Đại học Sài Gòn. Đây là cổng chính của trường trên đường An Dương Vương. Đi thẳng qua cột cờ là đến sân trường; bên trái là khu Hiệu bộ, bên phải là khu D. Hãy mở bản đồ trong ứng dụng để chọn nơi bạn muốn đến."),
             ("CG02", cong, 10.760174m, 106.682716m, 25, null, "Mở cửa 06:00–21:00", "cổng phụ, cổng sau, nguyễn trãi, lối vào",
                 "Đây là cổng phụ số 6 đường Nguyễn Trãi. Cổng nằm cạnh khu A và gần khu E, bãi giữ xe. Nếu bạn đi xe, hãy rẽ sang bãi giữ xe trước khi vào khu học."),
-            ("A01", toaNha, 10.760174m, 106.682091m, 40, "Nhiều tầng phòng học", "07:00–21:00 (Thứ 2–Thứ 7)", "giảng đường, phòng học, khu a",
+            ("A01", toaNha, 10.760174m, 106.682091m, 30, "Nhiều tầng phòng học", "07:00–21:00 (Thứ 2–Thứ 7)", "giảng đường, phòng học, khu a",
                 "Bạn đang ở khu A, dãy nhà dài nằm phía trong cùng của sân trường. Đây là một trong các khu giảng đường chính. Mã phòng được ghi ở cửa từng phòng; hãy xem mã phòng trên thời khoá biểu rồi tìm theo số tầng."),
             ("A001", toaNha, 10.760037m, 106.682609m, 20, "Tầng trệt, đầu khu A", "07:00–21:00 (Thứ 2–Thứ 7)", "phòng học, a001, khu a",
                 "Đây là phòng A001, nằm ở đầu khu A, gần cổng Nguyễn Trãi. Phòng thường được dùng cho các buổi học và sinh hoạt đông người. Hãy kiểm tra lịch sử dụng phòng trước khi vào."),
             ("HT01", hoiTruong, 10.760009m, 106.681622m, 30, "Hội trường lớn", "Theo lịch sự kiện", "hội trường, sự kiện, lễ, hội nghị",
                 "Bạn đang đến Hội trường A. Đây là nơi tổ chức lễ khai giảng, lễ tốt nghiệp, hội thảo và các chương trình văn nghệ của sinh viên. Lịch sự kiện được thông báo trên trang của trường và trong ứng dụng."),
-            ("B01", toaNha, 10.759838m, 106.681749m, 35, "Phòng học các tầng", "07:00–21:00 (Thứ 2–Thứ 7)", "giảng đường, phòng học, khu b",
+            ("B01", toaNha, 10.759838m, 106.681749m, 30, "Phòng học các tầng", "07:00–21:00 (Thứ 2–Thứ 7)", "giảng đường, phòng học, khu b",
                 "Đây là dãy trái của khu B, nằm giữa Hội trường A và khu C. Khu B có các phòng học lý thuyết dùng chung cho nhiều khoa. Khi đi qua hành lang, bạn vui lòng giữ trật tự vì các lớp có thể đang học."),
-            ("B02", toaNha, 10.759838m, 106.682413m, 35, "Phòng học các tầng", "07:00–21:00 (Thứ 2–Thứ 7)", "giảng đường, phòng học, khu b",
+            ("B02", toaNha, 10.759838m, 106.682413m, 30, "Phòng học các tầng", "07:00–21:00 (Thứ 2–Thứ 7)", "giảng đường, phòng học, khu b",
                 "Đây là dãy phải của khu B, đối diện dãy trái qua lối đi chính. Ngay phía sau dãy này là căn tin. Hãy xem mã phòng để biết phòng học nằm ở dãy trái hay dãy phải."),
             ("KLF01", thuVien, 10.759728m, 106.681544m, 20, "Khu tự học hai bên", "07:00–21:00", "thư viện, sách, tự học, đọc sách, klf",
                 "Bạn đang ở khu KLF, nằm giữa khu B và khu C phía bên trái. Hai bên là khu tự học, nơi sinh viên ôn bài và làm việc nhóm. Vui lòng giữ yên lặng để không làm phiền người khác."),
@@ -75,17 +75,17 @@ public static class SeedData
                 "Đây là cột cờ, nằm ở trung tâm sân trường. Từ đây, khu B ở phía trước, khu C ở hai bên gần cổng chính. Cột cờ cũng là nơi tổ chức lễ chào cờ và là điểm hẹn quen thuộc của sinh viên."),
             ("CT01", cangTin, 10.759728m, 106.682643m, 20, "Khu ăn uống", "06:30–19:00", "căng tin, căn tin, ăn uống, cơm, nước",
                 "Bạn đang ở căn tin, nằm giữa khu B và khu C bên phải. Đây là nơi sinh viên và cán bộ ăn sáng, ăn trưa và nghỉ ngơi giữa các giờ học. Vui lòng giữ vệ sinh chung và bỏ rác đúng nơi quy định."),
-            ("C01", toaNha, 10.759617m, 106.681749m, 35, "Phòng học các tầng", "07:00–21:00 (Thứ 2–Thứ 7)", "giảng đường, phòng học, khu c",
+            ("C01", toaNha, 10.759617m, 106.681749m, 30, "Phòng học các tầng", "07:00–21:00 (Thứ 2–Thứ 7)", "giảng đường, phòng học, khu c",
                 "Đây là dãy trái của khu C, nằm gần cổng chính. Khu C có các phòng học và phòng thực hành của nhiều khoa. Từ đây, đi thẳng vào trong là khu B và Hội trường A."),
-            ("C02", toaNha, 10.759617m, 106.682413m, 35, "Phòng học các tầng", "07:00–21:00 (Thứ 2–Thứ 7)", "giảng đường, phòng học, khu c",
+            ("C02", toaNha, 10.759617m, 106.682413m, 30, "Phòng học các tầng", "07:00–21:00 (Thứ 2–Thứ 7)", "giảng đường, phòng học, khu c",
                 "Đây là dãy phải của khu C. Phía sau dãy này là căn tin và khu D. Hãy đối chiếu mã phòng trên thời khoá biểu để tìm đúng phòng học."),
-            ("HB01", phongBan, 10.759426m, 106.681703m, 35, "Các phòng ban của trường", "07:30–11:30, 13:30–16:30 (Thứ 2–Thứ 6)", "hiệu bộ, phòng đào tạo, công tác sinh viên, học phí, phòng ban, học vụ",
+            ("HB01", phongBan, 10.759426m, 106.681703m, 30, "Các phòng ban của trường", "07:30–11:30, 13:30–16:30 (Thứ 2–Thứ 6)", "hiệu bộ, phòng đào tạo, công tác sinh viên, học phí, phòng ban, học vụ",
                 "Bạn đang ở khu Hiệu bộ, ngay bên trái cổng chính. Đây là nơi làm việc của Ban Giám hiệu và các phòng ban. Sinh viên cần làm thủ tục hành chính, hồ sơ hay giấy xác nhận thì đến đây trong giờ hành chính."),
-            ("D01", toaNha, 10.759426m, 106.682456m, 35, "Phòng học các tầng", "07:00–21:00 (Thứ 2–Thứ 7)", "giảng đường, phòng học, khu d",
+            ("D01", toaNha, 10.759426m, 106.682456m, 30, "Phòng học các tầng", "07:00–21:00 (Thứ 2–Thứ 7)", "giảng đường, phòng học, khu d",
                 "Đây là khu D, nằm bên phải cổng chính. Khu D có các phòng học phục vụ nhiều khoa. Từ đây, đi vào trong là khu C và căn tin."),
             ("E01", toaNha, 10.760133m, 106.682853m, 30, "Phòng học các tầng", "07:00–21:00 (Thứ 2–Thứ 7)", "giảng đường, phòng học, khu e",
                 "Bạn đang ở khu E, nằm bên kia cổng số 6 Nguyễn Trãi, cạnh bãi giữ xe. Khu E có các phòng học dành cho nhiều lớp. Hãy chú ý xe ra vào khi đi qua khu vực cổng."),
-            ("GX01", giuXe, 10.759907m, 106.682853m, 35, null, "06:00–21:30", "gửi xe, giữ xe, nhà xe, bãi xe",
+            ("GX01", giuXe, 10.759907m, 106.682853m, 30, null, "06:00–21:30", "gửi xe, giữ xe, nhà xe, bãi xe",
                 "Đây là bãi giữ xe của trường, nằm cạnh khu E và gần cổng Nguyễn Trãi. Bạn vui lòng giữ vé xe cẩn thận và để xe đúng khu vực được hướng dẫn."),
             ("BB01", theThao, 10.759765m, 106.682896m, 15, null, "Theo lịch sử dụng", "bóng bàn, thể thao",
                 "Đây là nhà bóng bàn, nằm ở góc bãi giữ xe. Sinh viên có thể chơi bóng bàn trong giờ học thể dục hoặc theo lịch đăng ký của trường."),
@@ -128,7 +128,7 @@ public static class SeedData
             var d = new Diem
             {
                 TenDiem = ten[m.ma], LoaiDiem = m.loai, ViDo = m.lat, KinhDo = m.lng,
-                BanKinh = m.banKinh, Tang = m.tang, GioLamViec = m.gio, TuKhoa = m.tuKhoa,
+                BanKinh = Math.Clamp(m.banKinh, 0, 30), Tang = m.tang, GioLamViec = m.gio, TuKhoa = m.tuKhoa,
                 MaQR = $"CG{i:D4}", TrangThai = TrangThaiDiem.DaXuatBan, NguoiTao = editor,
             };
             d.NoiDungs.Add(new NoiDung { MaNgonNgu = "vi", TieuDe = d.TenDiem, VanBan = m.vanBan, TrangThai = TrangThaiNoiDung.Goc });
@@ -212,7 +212,7 @@ public static class SeedData
         
                 Tao("Hội thao toàn khoa tại sân thể thao cơ sở chính",
                     $"Sự kiện Hội thao toàn khoa diễn ra vào {thu}, từ 7:00 đến 11:30 tại sân thể thao cơ sở chính (sân bóng đá, sân bóng rổ, sân cầu lông). " +
-                    "Các nội dung thi đấu: bóng đá nam. Sinh viên tham gia tập trung tại sân bóng đá lúc 13h00, mang giày thể thao và áo khoa. Mời các bạn đến cổ vũ!",
+                    "Các nội dung thi đấu: bóng đá nam, bóng rổ, cầu lông và kéo co. Sinh viên tham gia tập trung tại sân bóng đá lúc 6:45, mang giày thể thao và áo khoa. Mời các bạn đến cổ vũ!",
                     null, 10.759600m, 106.682860m, 60, "Thuong", 2, ngayHoiThao.AddHours(12),
                     "Faculty Sports Festival at the main campus sports ground",
                     $"The Faculty Sports Festival takes place on Saturday {ngayHoiThao:dd/MM/yyyy}, 7:00–11:30, at the main campus sports ground (football, basketball and badminton courts). " +
@@ -234,9 +234,8 @@ public static class SeedData
                     "Building C (left and right wings) has electrical maintenance from 12:00 to 13:30 every day this week. Lifts and air conditioning are off during that time; afternoon classes go ahead as usual."),
                
             };
-            // Bỏ qua mẫu nào đã có thông báo cùng tiêu đề còn hiệu lực
-            var utcNow = DateTime.UtcNow;
-            var dangCo = await db.ThongBaos.Where(t => t.KetThuc >= utcNow).Select(t => t.TieuDe).ToListAsync();
+            // Bỏ qua mẫu nào đã từng tồn tại trong CSDL (tránh chèn trùng lặp khi thông báo cũ hết hạn)
+            var dangCo = await db.ThongBaos.Select(t => t.TieuDe).ToListAsync();
             var themTB = mauThongBao.Where(t => !dangCo.Contains(t.TieuDe)).ToList();
             db.ThongBaos.AddRange(themTB);
             soThongBao = themTB.Count;
@@ -263,7 +262,7 @@ public static class SeedData
                     TieuDe = "Tour tân sinh viên: căn tin, khu tự học và khuôn viên", ThuTu = 4,
                     MoTa = "Review cơ sở chính dành cho tân sinh viên: khuôn viên, căn tin, khu tự học, nhà vệ sinh…",
                     DuongDan = "https://www.youtube.com/watch?v=DRUr1zb3Dx4",
-                    MaDiem = Tim("Căn tin")?.MaDiem,
+                    MaDiem = (Tim("Canteen") ?? Tim("Căn tin"))?.MaDiem,
                 },
                 new Video
                 {

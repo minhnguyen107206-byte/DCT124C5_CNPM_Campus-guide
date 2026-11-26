@@ -29,4 +29,4 @@ cd "$WEB"
 # --no-launch-profile để launchSettings.json (cổng 5000) không ghi đè cổng mới
 ASPNETCORE_ENVIRONMENT=Development \
 PublicBaseUrl="http://$IP:$PORT" \
-dotnet run --no-launch-profile -- --urls "http://0.0.0.0:$PORT"
+dotnet run --no-launch-profile -- --urls "http://0.0.0.0:$PORT" --Tunnel:Port="$PORT"

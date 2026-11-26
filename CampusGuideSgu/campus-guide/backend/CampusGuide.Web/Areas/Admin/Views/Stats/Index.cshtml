@@ -5,7 +5,16 @@
     List<Diem> points = ViewBag.Points; List<NgonNgu> langs = ViewBag.Langs;
     var q = $"From={f.From:yyyy-MM-dd}&To={f.To:yyyy-MM-dd}&MaDiem={f.MaDiem}&Lang={f.Lang}&Source={f.Source}";
 }
-<h3 class="page-title">Thống kê</h3>
+@section Head {
+<style>
+    @@media print {
+        .sidebar, .topbar, .sidebar-backdrop, form, .no-print { display: none !important; }
+        .admin-main { padding: 0 !important; }
+        .card { box-shadow: none !important; border: 1px solid #ddd !important; break-inside: avoid; }
+    }
+</style>
+}
+<h3 class="page-title">Thống kê <span class="small text-muted fw-normal">(@f.From.ToString("dd/MM/yyyy") – @f.To.ToString("dd/MM/yyyy"))</span></h3>
 <form method="get" class="card p-3 mb-3">
     <div class="row g-2 align-items-end">
         <div class="col-md-2"><label class="form-label small">Từ ngày</label><input type="date" name="From" value="@f.From.ToString("yyyy-MM-dd")" class="form-control" /></div>
@@ -20,7 +29,8 @@
             <select name="Source" class="form-select"><option value="">Tất cả</option>
                 @foreach (var s in new[] { NguonNghe.QR, NguonNghe.GPS, NguonNghe.Tour, NguonNghe.DanhSach }) { <option selected="@(f.Source == s)">@s</option> }</select></div>
         <div class="col-md-2 d-flex gap-1"><button class="btn btn-primary w-100">Xem</button>
-            <a class="btn btn-outline-success" href="/admin/stats/export?@q" title="Xuất Excel"><i class="bi bi-file-earmark-excel"></i></a></div>
+            <a class="btn btn-outline-success" href="/admin/stats/export?@q" title="Xuất Excel"><i class="bi bi-file-earmark-excel"></i></a>
+            <button type="button" class="btn btn-outline-danger" onclick="window.print()" title="In / Lưu PDF"><i class="bi bi-file-earmark-pdf"></i></button></div>
     </div>
 </form>
 <div class="row g-3 mb-3">
@@ -45,7 +55,7 @@
             i++;
             <tr><td>@i</td><td class="fw-semibold">@p.Name</td><td>@p.Listens</td><td>@p.Qr</td>
                 <td>@(p.Rating?.ToString("0.0") ?? "–") <span class="small text-muted">(@p.RatingCount)</span></td>
-                <td class="text-end"><a href="/admin/stats/point/@p.Id">Chi tiết</a></td></tr>
+                <td class="text-end no-print"><a href="/admin/stats/point/@p.Id?from=@f.From.ToString("yyyy-MM-dd")&to=@f.To.ToString("yyyy-MM-dd")">Chi tiết</a></td></tr>
         }
     </table>
 </div>

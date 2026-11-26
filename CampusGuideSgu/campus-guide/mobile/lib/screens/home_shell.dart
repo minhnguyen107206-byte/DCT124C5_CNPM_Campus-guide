@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../models.dart';
@@ -25,6 +26,9 @@ class HomeShell extends StatefulWidget {
 
 class _HomeShellState extends State<HomeShell> {
   int _tab = 0;
+  StreamSubscription<Point>? _queuedAudioSub;
+  final List<Notice> _noticeQueue = [];
+  bool _showingNotice = false;
 
   @override
   void initState() {
@@ -35,16 +39,18 @@ class _HomeShellState extends State<HomeShell> {
     // UC06 – vào bán kính một điểm khi bật tự động thuyết minh
     app.onGeofenceEnter = (Point p) {
       if (!mounted) return;
+      HapticFeedback.vibrate();
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text('${app.t('nearPoint')} ${p.name}'),
         duration: const Duration(seconds: 4),
       ));
       if (!p.hasAudio) return;
       if (audio.playing && audio.current?.id != p.id) {
-        // A2: đang phát điểm khác → hỏi sau khi phát xong
-        late final StreamSubscription<Point> sub;
-        sub = audio.onCompleted.listen((_) {
-          sub.cancel();
+        // A2: đang phát điểm khác → chỉ giữ 1 listener chờ phát xong (tránh chồng dialog / leak)
+        _queuedAudioSub?.cancel();
+        _queuedAudioSub = audio.onCompleted.listen((_) {
+          _queuedAudioSub?.cancel();
+          _queuedAudioSub = null;
           if (mounted) _askPlay(p);
         });
       } else {
@@ -52,19 +58,36 @@ class _HomeShellState extends State<HomeShell> {
       }
     };
 
-    // UC10 – thông báo khu vực / khẩn
+    // UC10 – thông báo khu vực / khẩn (hiển thị tuần tự, không chồng dialog)
     app.onNotice = (Notice n) {
       if (!mounted) return;
-      showDialog(
+      _noticeQueue.add(n);
+      _drainNotices();
+    };
+  }
+
+  Future<void> _drainNotices() async {
+    if (_showingNotice || _noticeQueue.isEmpty || !mounted) return;
+    _showingNotice = true;
+    while (_noticeQueue.isNotEmpty && mounted) {
+      final n = _noticeQueue.removeAt(0);
+      await showDialog(
         context: context,
-        builder: (_) => AlertDialog(
+        builder: (ctx) => AlertDialog(
           icon: Icon(n.urgent ? Icons.warning_amber : Icons.campaign, color: n.urgent ? Colors.red : null),
           title: Text(n.title),
           content: Text(n.body),
-          actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('OK'))],
+          actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('OK'))],
         ),
       );
-    };
+    }
+    _showingNotice = false;
+  }
+
+  @override
+  void dispose() {
+    _queuedAudioSub?.cancel();
+    super.dispose();
   }
 
   void _askPlay(Point p) {

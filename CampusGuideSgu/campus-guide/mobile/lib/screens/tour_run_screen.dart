@@ -69,6 +69,7 @@ class _TourRunScreenState extends State<TourRunScreen> {
     }
     setState(() => _i++);
     app.saveTourProgress(widget.tour.id, _i);
+    if (app.position != null) _onMove(app.position!);
     try {
       _map.move(LatLng(_p.lat, _p.lng), 18);
     } catch (_) {}
@@ -130,7 +131,7 @@ class _TourRunScreenState extends State<TourRunScreen> {
                 if (me != null) Polyline(points: [me, LatLng(_p.lat, _p.lng)], strokeWidth: 4, color: Theme.of(context).colorScheme.primary),
               ]),
               CircleLayer(circles: [
-                CircleMarker(point: LatLng(_p.lat, _p.lng), radius: _p.radius.toDouble(), useRadiusInMeter: true, color: Colors.green.withOpacity(0.15)),
+                CircleMarker(point: LatLng(_p.lat, _p.lng), radius: _p.radius.toDouble(), useRadiusInMeter: true, color: Colors.green.withValues(alpha: 0.15)),
               ]),
               MarkerLayer(markers: [
                 for (var k = 0; k < pts.length; k++)

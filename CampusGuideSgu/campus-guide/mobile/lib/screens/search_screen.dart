@@ -35,16 +35,24 @@ class _SearchScreenState extends State<SearchScreen> {
   Timer? _debounce;
   List<Point>? _results;
   bool _loading = false;
+  int _reqId = 0;
+
+  static const _quickTagsVi = ['Phòng Đào tạo', 'Nộp học phí', 'Thư viện', 'Căng tin', 'Nhà xe', 'Hội trường'];
+  static const _quickTagsEn = ['Academic Affairs', 'Tuition', 'Library', 'Canteen', 'Parking', 'Hall'];
 
   void _onChanged(String q) {
     _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 350), () => _search(q));
   }
 
-  Future<void> _search(String q) async {
+  Future<void> _search(String q, {bool saveRecent = false}) async {
     final app = context.read<AppState>();
+    final req = ++_reqId;
     if (q.trim().length < 2) {
-      setState(() => _results = null); // E1: chờ nhập thêm
+      setState(() {
+        _results = null;
+        _loading = false;
+      }); // E1: chờ nhập thêm
       return;
     }
     setState(() => _loading = true);
@@ -54,13 +62,22 @@ class _SearchScreenState extends State<SearchScreen> {
     } catch (_) {
       // A1: mất mạng → tìm trong dữ liệu offline
       final key = normalizeVi(q);
-      res = app.points.where((p) => normalizeVi('${p.name} ${p.keywords ?? ''} ${p.text}').contains(key)).toList();
+      res = app.points.where((p) => normalizeVi('${p.name} ${p.title} ${p.keywords ?? ''} ${p.text}').contains(key)).toList();
     }
-    if (!mounted) return;
+    if (!mounted || req != _reqId) return;
+    if (saveRecent && res.isNotEmpty) {
+      app.addRecentSearch(q);
+    }
     setState(() {
       _results = res;
       _loading = false;
     });
+  }
+
+  void _pickKeyword(String kw) {
+    _ctrl.text = kw;
+    _ctrl.selection = TextSelection.fromPosition(TextPosition(offset: kw.length));
+    _search(kw, saveRecent: true);
   }
 
   @override
@@ -74,20 +91,67 @@ class _SearchScreenState extends State<SearchScreen> {
   Widget build(BuildContext context) {
     final app = context.watch<AppState>();
     final popular = [...app.points]..sort((a, b) => (b.ratingCount).compareTo(a.ratingCount));
+    final quickTags = app.lang == 'vi' ? _quickTagsVi : _quickTagsEn;
     return Scaffold(
       appBar: AppBar(
         title: TextField(
           controller: _ctrl,
           autofocus: true,
-          decoration: InputDecoration(hintText: app.t('search'), border: InputBorder.none),
+          decoration: InputDecoration(
+            hintText: app.t('search'),
+            border: InputBorder.none,
+            suffixIcon: _ctrl.text.isNotEmpty
+                ? IconButton(
+                    icon: const Icon(Icons.clear),
+                    onPressed: () {
+                      _ctrl.clear();
+                      _search('');
+                    },
+                  )
+                : null,
+          ),
           onChanged: _onChanged,
-          onSubmitted: _search,
+          onSubmitted: (q) => _search(q, saveRecent: true),
         ),
       ),
       body: _loading
           ? const LinearProgressIndicator()
           : _results == null
-              ? const SizedBox.shrink()
+              ? ListView(
+                  padding: const EdgeInsets.all(16),
+                  children: [
+                    if (app.recentSearches.isNotEmpty) ...[
+                      Text(app.t('recentSearches'), style: Theme.of(context).textTheme.titleSmall),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: app.recentSearches
+                            .map((r) => InputChip(
+                                  avatar: const Icon(Icons.history, size: 16),
+                                  label: Text(r),
+                                  onPressed: () => _pickKeyword(r),
+                                  onDeleted: () => app.removeRecentSearch(r),
+                                ))
+                            .toList(),
+                      ),
+                      const SizedBox(height: 20),
+                    ],
+                    Text(app.t('quickSearch'), style: Theme.of(context).textTheme.titleSmall),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: quickTags
+                          .map((tag) => ActionChip(
+                                avatar: const Icon(Icons.bolt, size: 16),
+                                label: Text(tag),
+                                onPressed: () => _pickKeyword(tag),
+                              ))
+                          .toList(),
+                    ),
+                  ],
+                )
               : _results!.isEmpty
                   ? ListView(children: [
                       // E2: không có kết quả → gợi ý điểm phổ biến
@@ -103,6 +167,9 @@ class _SearchScreenState extends State<SearchScreen> {
         leading: ClipRRect(borderRadius: BorderRadius.circular(8), child: PointImage(point: p, size: 48)),
         title: Text(p.name),
         subtitle: Text([p.type, if (app.distanceTo(p) != null) formatDistance(app.distanceTo(p))].join(' · ')),
-        onTap: () => Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => PointDetailScreen(point: p))),
+        onTap: () {
+          if (_ctrl.text.trim().length >= 2) app.addRecentSearch(_ctrl.text);
+          Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => PointDetailScreen(point: p)));
+        },
       );
 }
