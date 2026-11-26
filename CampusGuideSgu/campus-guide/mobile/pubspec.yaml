@@ -1,0 +1,33 @@
+name: campus_guide
+description: CampusGuide – thuyết minh và hướng dẫn đa ngôn ngữ trong khuôn viên trường (Đồ án CNPM – ĐH Sài Gòn).
+publish_to: "none"
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.7.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  http: ^1.2.2
+  provider: ^6.1.2
+  shared_preferences: ^2.3.2
+  flutter_map: ^7.0.2
+  latlong2: ^0.9.1
+  geolocator: ^13.0.1
+  mobile_scanner: ^7.1.0 # từ bản 7, iOS dùng Apple Vision (build được trên Simulator Mac chip M); cần Flutter ≥ 3.29
+  just_audio: ^0.9.40
+  audio_session: ^0.1.21 # vẫn nghe được khi iPhone gạt nút im lặng
+  flutter_tts: ^4.2.0 # đọc thuyết minh bằng giọng của điện thoại (máy chủ không còn sinh file audio)
+  path_provider: ^2.1.4
+  archive: ^3.6.1
+  crypto: ^3.0.5
+  uuid: ^4.5.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
