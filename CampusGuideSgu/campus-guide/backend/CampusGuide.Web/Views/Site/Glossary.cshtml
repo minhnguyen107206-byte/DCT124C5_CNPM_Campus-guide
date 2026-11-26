@@ -1,0 +1,61 @@
+@model List<ThuatNgu>
+@{
+    ViewData["Title"] = S.T("nav_glossary");
+    var q = ViewData["Q"] as string;
+    string First(ThuatNgu t) { var n = CampusGuide.Web.Controllers.Api.AppApiController.Normalize(t.TuGoc); return n.Length > 0 && char.IsLetter(n[0]) ? n[..1].ToUpperInvariant() : "#"; }
+    var groups = Model.GroupBy(First).OrderBy(g => g.Key).ToList();
+}
+<div class="container-xl">
+    <div class="page-head"><h1>@S.T("nav_glossary")</h1><p>@S.T("glossary_lead")</p></div>
+    <form method="get" action="/thuat-ngu" class="search-box my-3" role="search">
+        <i class="bi bi-search"></i>
+        <input type="search" name="q" value="@q" id="gq" class="form-control" placeholder="@S.T("search_terms")" autocomplete="off" />
+    </form>
+    @if (groups.Count > 1)
+    {
+        <div class="az mb-3">@foreach (var g in groups) { <a href="#az-@g.Key">@g.Key</a> }</div>
+    }
+    @if (Model.Count == 0) { <div class="card-cg empty"><i class="bi bi-journal-x"></i>@S.T("no_results")</div> }
+    @foreach (var g in groups)
+    {
+        <h2 class="h6 fw-800 mt-4 mb-2 text-primary" id="az-@g.Key">@g.Key</h2>
+        <div class="row g-3">
+            @foreach (var t in g)
+            {
+                var mine = t.BanDichs.FirstOrDefault(b => b.MaNgonNgu == S.Lang);
+                <div class="col-sm-6 col-lg-4 gitem" data-k="@CampusGuide.Web.Controllers.Api.AppApiController.Normalize(t.TuGoc + " " + t.GhiChu + " " + string.Join(' ', t.BanDichs.Select(b => b.BanDich)))">
+                    <div class="gterm">
+                        <h3>@t.TuGoc</h3>
+                        @if (mine != null && S.Lang != "vi") { <div class="tr">@S.Current?.Co @mine.BanDich</div> }
+                        @if (!string.IsNullOrWhiteSpace(t.GhiChu)) { <div class="small text-muted mt-1">@t.GhiChu</div> }
+                        @if (t.BanDichs.Count > 0)
+                        {
+                            <details><summary>@S.T("translations") (@t.BanDichs.Count)</summary>
+                                <ul class="list-unstyled small mt-2 mb-0">
+                                    @foreach (var b in t.BanDichs.OrderBy(b => S.Langs.FindIndex(l => l.MaNgonNgu == b.MaNgonNgu)))
+                                    {
+                                        var l = S.Langs.FirstOrDefault(x => x.MaNgonNgu == b.MaNgonNgu);
+                                        <li><span class="text-muted">@(l?.Co ?? b.MaNgonNgu)</span> @b.BanDich</li>
+                                    }
+                                </ul>
+                            </details>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+@section Scripts {
+<script>
+// Lọc ngay khi gõ (không dấu), không cần tải lại trang
+(function () {
+    var i = document.getElementById('gq'); if (!i) return;
+    function norm(s) { return s.toLowerCase().replace(/đ/g, 'd').normalize('NFD').replace(/[̀-ͯ]/g, '').trim(); }
+    i.addEventListener('input', function () {
+        var k = norm(i.value);
+        document.querySelectorAll('.gitem').forEach(function (e) { e.style.display = !k || e.dataset.k.indexOf(k) >= 0 ? '' : 'none'; });
+    });
+})();
+</script>
+}

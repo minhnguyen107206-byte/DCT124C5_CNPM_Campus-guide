@@ -1,0 +1,55 @@
+@model ContentVm
+@{ ViewData["Title"] = "Nội dung – " + Model.TenDiem; }
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h3 class="page-title mb-0">Nội dung thuyết minh: @Model.TenDiem</h3>
+    <a asp-action="Index" class="btn btn-light">← Danh sách điểm</a>
+</div>
+<div class="row g-3">
+    <div class="col-lg-7">
+        <form asp-action="ContentEdit" method="post" class="card p-4">
+            <h5 class="mb-3">Bản gốc tiếng Việt <span class="badge bg-primary">phiên bản @Model.PhienBan</span></h5>
+            <input type="hidden" asp-for="MaDiem" /><input type="hidden" asp-for="TenDiem" />
+            <label class="form-label">Tiêu đề</label><input asp-for="TieuDe" class="form-control" />
+            <span asp-validation-for="TieuDe" class="text-danger small"></span>
+            <label class="form-label mt-3">Văn bản thuyết minh <span class="text-muted small" id="count"></span></label>
+            <textarea asp-for="VanBan" rows="10" class="form-control" maxlength="5000"></textarea>
+            <span asp-validation-for="VanBan" class="text-danger small"></span>
+            <div class="mt-3 d-flex gap-2 flex-wrap">
+                <button class="btn btn-primary" name="translateNow" value="false">Lưu</button>
+                <button class="btn btn-success" name="translateNow" value="true"><i class="bi bi-translate"></i> Lưu &amp; dịch ngay</button>
+                <button type="button" class="btn btn-outline-secondary" data-speak data-lang="vi" data-title="#TieuDe" data-text="#VanBan"><i class="bi bi-volume-up"></i> Nghe thử</button>
+            </div>
+            <div class="speak-note small text-muted mt-2">Nghe thử bằng giọng của trình duyệt; app đọc bằng giọng của điện thoại.</div>
+            @if (Model.AudioUrl != null) { <audio controls src="@Model.AudioUrl" class="w-100 mt-3"></audio> }
+        </form>
+    </div>
+    <div class="col-lg-5">
+        <form asp-action="Translate" asp-route-id="@Model.MaDiem" method="post" class="card p-4">
+            <h5>Dịch tự động (UC16)</h5>
+            <p class="small text-muted">Dịch bằng MyMemory (miễn phí). Bỏ chọn các ngôn ngữ không cần dịch. Thuật ngữ trong bảng thuật ngữ được thay bằng bản dịch chuẩn.</p>
+            @foreach (var l in Model.NgonNgus)
+            {
+                <div class="form-check"><input class="form-check-input" type="checkbox" name="langs" value="@l.MaNgonNgu" id="l_@l.MaNgonNgu" checked />
+                    <label class="form-check-label" for="l_@l.MaNgonNgu">@l.Co @l.TenNgonNgu</label></div>
+            }
+            <button class="btn btn-success mt-3"><i class="bi bi-translate"></i> Dịch</button>
+        </form>
+        <div class="card p-3 mt-3">
+            <h6>Các bản dịch</h6>
+            <table class="table table-sm mb-0">
+                @foreach (var t in Model.BanDichs)
+                {
+                    <tr><td>@t.MaNgonNgu</td><td>@Ui.Badge(t.TrangThai)</td>
+                        <td class="text-end"><a href="/admin/translations/review/@t.MaNoiDung" class="small">Xem / duyệt</a></td></tr>
+                }
+                @if (Model.BanDichs.Count == 0) { <tr><td class="text-muted small">Chưa có bản dịch.</td></tr> }
+            </table>
+        </div>
+    </div>
+</div>
+@section Scripts {
+<script>
+    const ta = document.getElementById('VanBan'), c = document.getElementById('count');
+    const upd = () => c.textContent = `(${ta.value.length}/5000 ký tự)`; ta.addEventListener('input', upd); upd();
+</script>
+}

@@ -1,0 +1,63 @@
+@model Tour
+@using CampusGuide.Web.Services
+@{
+    ViewData["Title"] = "Chi tiết tour";
+    List<Diem> stops = ViewBag.Stops;
+    Dictionary<int, int> lens = ViewBag.TextLens;
+    const double R = 6371000;
+    double tong = 0;
+    double Rad(decimal x) => (double)x * Math.PI / 180;
+    var walkMin = 0.0;
+    var listenSec = stops.Sum(d => Math.Ceiling(lens.GetValueOrDefault(d.MaDiem) / TourCalc.CharsPerSecond));
+}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h3 class="page-title mb-0">@Model.TenTour – chi tiết quãng đường</h3>
+    <div><a asp-action="Edit" asp-route-id="@Model.MaTour" class="btn btn-outline-secondary"><i class="bi bi-pencil"></i> Sửa tour</a> <a asp-action="Index" class="btn btn-light">Quay lại</a></div>
+</div>
+
+<div class="card p-3 mb-3">
+    <div class="fw-semibold mb-1">Công thức Haversine (khoảng cách đường chim bay giữa 2 toạ độ GPS)</div>
+    <div class="font-monospace small">
+        a = sin²(Δφ/2) + cos φ1 · cos φ2 · sin²(Δλ/2) &nbsp;&nbsp;→&nbsp;&nbsp; d = 2R · arcsin(√a)
+    </div>
+    <div class="small text-muted mt-1">φ = vĩ độ, λ = kinh độ (đổi ra radian = độ × π/180); R = 6.371.000 m.</div>
+</div>
+
+<div class="card mb-3">
+    <table class="table table-sm table-hover mb-0 align-middle">
+        <thead><tr><th>#</th><th>Từ điểm</th><th>Đến điểm</th><th class="text-end">Δφ (rad)</th><th class="text-end">Δλ (rad)</th><th class="text-end">a</th><th class="text-end">Khoảng cách</th><th class="text-end">Cộng dồn</th></tr></thead>
+        <tbody>
+        @for (int i = 1; i < stops.Count; i++)
+        {
+            var p = stops[i - 1]; var q = stops[i];
+            double f1 = Rad(p.ViDo), f2 = Rad(q.ViDo), df = f2 - f1, dl = Rad(q.KinhDo) - Rad(p.KinhDo);
+            double a = Math.Pow(Math.Sin(df / 2), 2) + Math.Cos(f1) * Math.Cos(f2) * Math.Pow(Math.Sin(dl / 2), 2);
+            double d = 2 * R * Math.Asin(Math.Sqrt(a));
+            tong += d;
+            <tr>
+                <td>@i</td>
+                <td>@p.TenDiem<div class="small text-muted">@p.ViDo.ToString("0.000000"), @p.KinhDo.ToString("0.000000")</div></td>
+                <td>@q.TenDiem<div class="small text-muted">@q.ViDo.ToString("0.000000"), @q.KinhDo.ToString("0.000000")</div></td>
+                <td class="text-end font-monospace small">@df.ToString("0.000e+0")</td>
+                <td class="text-end font-monospace small">@dl.ToString("0.000e+0")</td>
+                <td class="text-end font-monospace small">@a.ToString("0.000e+0")</td>
+                <td class="text-end fw-semibold">@d.ToString("0.0") m</td>
+                <td class="text-end">@tong.ToString("0.0") m</td>
+            </tr>
+        }
+        @if (stops.Count < 2) { <tr><td colspan="8" class="text-center text-muted p-3">Tour cần ít nhất 2 điểm.</td></tr> }
+        </tbody>
+        <tfoot><tr class="table-light"><th colspan="6" class="text-end">Tổng quãng đường</th><th class="text-end" colspan="2">@Math.Round(tong) m</th></tr></tfoot>
+    </table>
+</div>
+@{ walkMin = tong / TourCalc.WalkMetersPerMinute; var total = Math.Ceiling(walkMin + listenSec / 60.0 + stops.Count); }
+<div class="card p-3">
+    <div class="fw-semibold mb-2">Thời lượng</div>
+    <table class="table table-sm mb-0" style="max-width:640px">
+        <tr><td>Đi bộ</td><td>@Math.Round(tong) m ÷ @TourCalc.WalkMetersPerMinute m/phút</td><td class="text-end">@walkMin.ToString("0.0") phút</td></tr>
+        <tr><td>Nghe thuyết minh</td><td>@stops.Sum(d => lens.GetValueOrDefault(d.MaDiem)) ký tự ÷ @TourCalc.CharsPerSecond ký tự/giây</td><td class="text-end">@((listenSec / 60.0).ToString("0.0")) phút</td></tr>
+        <tr><td>Dừng ở mỗi điểm</td><td>@stops.Count điểm × 1 phút</td><td class="text-end">@stops.Count phút</td></tr>
+        <tr class="fw-semibold"><td colspan="2">Tổng (làm tròn lên)</td><td class="text-end">~@total phút</td></tr>
+    </table>
+    @if (Math.Round(tong) != Model.QuangDuong) { <div class="alert alert-warning small mt-3 mb-0">Số đang lưu là @Model.QuangDuong m – khác số tính lại ở trên (toạ độ điểm đã thay đổi). Bấm <b>Sửa tour → Lưu tour</b> để cập nhật.</div> }
+</div>

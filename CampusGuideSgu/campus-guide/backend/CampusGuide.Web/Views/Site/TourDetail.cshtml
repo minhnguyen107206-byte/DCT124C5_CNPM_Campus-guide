@@ -1,0 +1,68 @@
+@model TourDetailVm
+@{
+    var t = Model.Tour.T;
+    ViewData["Title"] = t.TenTour;
+    var inv = System.Globalization.CultureInfo.InvariantCulture;
+    var line = System.Text.Json.JsonSerializer.Serialize(Model.Stops.Select(s => new { id = s.P.Id, name = s.P.Title, lat = s.P.Lat, lng = s.P.Lng }));
+    var next = Model.Stops.FirstOrDefault();
+}
+@section Head { <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" /> }
+<div class="container-xl">
+    <div class="page-head">
+        <a href="/tour" class="small text-decoration-none"><i class="bi bi-arrow-left"></i> @S.T("nav_tours")</a>
+        <h1 class="mt-2">@t.TenTour</h1>
+        @if (!string.IsNullOrWhiteSpace(t.MoTa)) { <p>@t.MoTa</p> }
+    </div>
+    <div class="row g-2 my-2">
+        <div class="col-4"><div class="stat-tile"><b>@Model.Stops.Count</b><span>@S.T("stops")</span></div></div>
+        <div class="col-4"><div class="stat-tile"><b>@t.ThoiLuong'</b><span>@S.T("duration")</span></div></div>
+        <div class="col-4"><div class="stat-tile"><b>@(t.QuangDuong >= 1000 ? (t.QuangDuong / 1000.0).ToString("0.0", inv) + "km" : t.QuangDuong + "m")</b><span>@S.T("distance")</span></div></div>
+    </div>
+    <div class="row g-4 mt-1">
+        <div class="col-lg-5 order-lg-2">
+            <div class="map-box" id="tmap" style="height:320px"></div>
+            @if (next != null)
+            {
+                <a class="btn btn-primary btn-lg w-100 rounded-pill mt-3" href="/diem/@next.P.Id"><i class="bi bi-play-fill"></i> @S.T("start_tour"): @next.P.Title</a>
+            }
+        </div>
+        <div class="col-lg-7 order-lg-1">
+            <h2 class="h5 fw-800 mb-3">@S.T("itinerary")</h2>
+            <ol class="timeline">
+                @for (int i = 0; i < Model.Stops.Count; i++)
+                {
+                    var s = Model.Stops[i];
+                    <li>
+                        <span class="no">@(i + 1)</span>
+                        <a class="prow" href="/diem/@s.P.Id">
+                            <div class="ic @(s.P.Image == null ? s.Tone : "")">@if (s.P.Image != null) { <img src="@s.P.Image" alt="" loading="lazy" decoding="async" /> } else { <i class="bi @s.TypeIcon"></i> }</div>
+                            <div class="flex-grow-1 min-w-0"><h3>@s.P.Title</h3><p>@s.P.Text</p>
+                                <div class="small text-muted"><i class="bi bi-headphones"></i> ≈@(Math.Max(1, (int)Math.Round(s.P.AudioSeconds / 60.0))) @S.T("min")</div></div>
+                            <i class="bi bi-chevron-right text-muted"></i>
+                        </a>
+                    </li>
+                }
+            </ol>
+        </div>
+    </div>
+</div>
+@section Scripts {
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin="" defer></script>
+<script>
+window.addEventListener('load', function () {
+    if (!window.L) return;
+    var pts = @Html.Raw(line);
+    if (!pts.length) return;
+    var map = L.map('tmap', { maxZoom: 21, scrollWheelZoom: false });
+    L.tileLayer('https://mt{s}.google.com/vt/lyrs=y&hl=@S.Lang&x={x}&y={y}&z={z}', { subdomains: '0123', maxZoom: 21, attribution: '© Google' }).addTo(map);
+    var ll = pts.map(function (p) { return [p.lat, p.lng]; });
+    L.polyline(ll, { color: '#f97316', weight: 5, opacity: .9, dashArray: '8 8' }).addTo(map);
+    pts.forEach(function (p, i) {
+        L.marker([p.lat, p.lng], { icon: L.divIcon({ className: '', iconSize: [30, 30], iconAnchor: [15, 15],
+            html: '<div style="width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-weight:800;color:#fff;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.35);background:' + '#2563eb' + '">' + (i + 1) + '</div>' }) })
+         .addTo(map).bindPopup('<a href="/diem/' + p.id + '">' + p.name.replace(/</g, '&lt;') + '</a>');
+    });
+    map.fitBounds(L.latLngBounds(ll).pad(0.2));
+});
+</script>
+}

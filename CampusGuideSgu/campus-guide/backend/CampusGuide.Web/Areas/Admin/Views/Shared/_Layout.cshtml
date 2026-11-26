@@ -1,0 +1,103 @@
+@{
+    var ctrl = ViewContext.RouteData.Values["controller"]?.ToString();
+    bool qtv = User.IsInRole(VaiTroTen.QuanTriVien);
+    string Act(string c) => string.Equals(ctrl, c, StringComparison.OrdinalIgnoreCase) ? "active" : "";
+}
+<!doctype html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>@ViewData["Title"] – CampusGuide Admin</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+    <link rel="stylesheet" href="~/css/admin.css" asp-append-version="true" />
+    @await RenderSectionAsync("Head", required: false)
+</head>
+<body>
+@* Màn hình hẹp (điện thoại, cửa sổ thu nhỏ): thanh trên cùng có nút Menu mở/đóng thanh bên *@
+<header class="topbar">
+    <button type="button" class="menu-btn" id="menuBtn" aria-controls="sidebar" aria-expanded="false"><i class="bi bi-list"></i> Menu</button>
+    <a href="/admin" class="topbar-brand"><i class="bi bi-geo-alt-fill"></i> CampusGuide</a>
+</header>
+<div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+<div class="d-flex">
+    <nav class="sidebar d-flex flex-column p-3" id="sidebar">
+        <a href="/admin" class="brand mb-3"><i class="bi bi-geo-alt-fill"></i> CampusGuide</a>
+        <div class="small text-uppercase opacity-75 mb-1">Biên tập</div>
+        <a class="nav-link @Act("Home")" href="/admin"><i class="bi bi-speedometer2"></i> Tổng quan</a>
+        <a class="nav-link @Act("Live")" href="/admin/live"><i class="bi bi-broadcast"></i> Trực tiếp <span class="badge rounded-pill bg-success ms-1 d-none" id="liveNavCount"></span></a>
+        <a class="nav-link @Act("Points")" href="/admin/points"><i class="bi bi-pin-map"></i> Điểm thuyết minh</a>
+        <a class="nav-link @Act("Translations")" href="/admin/translations"><i class="bi bi-translate"></i> Duyệt bản dịch</a>
+        <a class="nav-link @Act("Tours")" href="/admin/tours"><i class="bi bi-signpost-split"></i> Tour &amp; gói offline</a>
+        <a class="nav-link @Act("Notices")" href="/admin/notices"><i class="bi bi-megaphone"></i> Thông báo khu vực</a>
+        <a class="nav-link @Act("Videos")" href="/admin/videos"><i class="bi bi-camera-video"></i> Video &amp; trực tiếp</a>
+        <a class="nav-link @Act("SiteQr")" href="/admin/siteqr"><i class="bi bi-qr-code"></i> QR trang web</a>
+        <a class="nav-link" href="/" target="_blank"><i class="bi bi-box-arrow-up-right"></i> Xem trang người dùng</a>
+        @if (qtv)
+        {
+            <div class="small text-uppercase opacity-75 mt-3 mb-1">Quản trị</div>
+            <a class="nav-link @Act("Users")" href="/admin/users"><i class="bi bi-people"></i> Tài khoản</a>
+            <a class="nav-link @Act("Languages")" href="/admin/languages"><i class="bi bi-globe2"></i> Ngôn ngữ &amp; giọng đọc</a>
+            <a class="nav-link @Act("Glossary")" href="/admin/glossary"><i class="bi bi-book"></i> Thuật ngữ</a>
+            <a class="nav-link @Act("Stats")" href="/admin/stats"><i class="bi bi-bar-chart-line"></i> Thống kê</a>
+        }
+        <div class="mt-auto pt-3 border-top border-secondary small">
+            <div class="fw-semibold">@User.Identity?.Name</div>
+            <div class="opacity-75">@(qtv ? "Quản trị viên" : "Biên tập viên")</div>
+            <a class="link-light" href="/admin/account/changepassword">Đổi mật khẩu</a>
+            <form method="post" action="/admin/account/logout" class="d-inline">
+                @Html.AntiForgeryToken()
+                <button class="btn btn-link link-light p-0 ms-2 small">Đăng xuất</button>
+            </form>
+        </div>
+    </nav>
+    <main class="flex-grow-1 p-3 p-lg-4 admin-main">
+        @if (TempData["ok"] is string ok)
+        {
+            <div class="alert alert-success alert-dismissible fade show"><i class="bi bi-check-circle"></i> @ok
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+        }
+        @if (TempData["err"] is string err)
+        {
+            <div class="alert alert-danger alert-dismissible fade show"><i class="bi bi-exclamation-triangle"></i> @err
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+        }
+        @RenderBody()
+    </main>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="~/js/nghe-thu.js" asp-append-version="true"></script>
+<script>
+// Nút Menu (màn hình hẹp) – không phụ thuộc Bootstrap JS nên vẫn chạy khi mất mạng
+(function () {
+    var btn = document.getElementById('menuBtn'), bar = document.getElementById('sidebar'), bg = document.getElementById('sidebarBackdrop');
+    if (!btn || !bar) return;
+    function set(open) {
+        document.body.classList.toggle('menu-open', open);
+        btn.setAttribute('aria-expanded', String(open));
+    }
+    btn.addEventListener('click', function () { set(!document.body.classList.contains('menu-open')); });
+    bg.addEventListener('click', function () { set(false); });
+    bar.addEventListener('click', function (e) { if (e.target.closest('a')) set(false); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') set(false); });
+    window.addEventListener('resize', function () { if (window.innerWidth >= 992) set(false); });
+})();
+// Số thiết bị đang truy cập trên menu "Trực tiếp" (và thẻ ở trang Tổng quan) – lấy từ /admin/live/data
+(function () {
+    var nav = document.getElementById('liveNavCount'), card = document.getElementById('homeLiveCount');
+    if (!nav) return;
+    function tick() {
+        fetch('/admin/live/data', { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (d) {
+            if (!d) return;
+            nav.textContent = d.dangTruyCap;
+            nav.classList.toggle('d-none', d.dangTruyCap === 0);
+            if (card) card.textContent = d.dangTruyCap + ' / ' + d.dangNghe;
+        }).catch(function () {});
+    }
+    tick(); setInterval(tick, 5000);
+})();
+</script>
+@await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mã QR mẫu CampusGuide</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  :root { --bg:#f6f7f9; --card:#fff; --ink:#1d2433; --muted:#667085; --line:#e4e7ec; --accent:#2f5597; --warn:#b42318; }
+  * { box-sizing: border-box; }
+  body { margin:0; padding:24px 16px; background:var(--bg); color:var(--ink); font:15px/1.5 -apple-system, "Segoe UI", Roboto, Arial, sans-serif; }
+  header { max-width:1100px; margin:0 auto 20px; }
+  h1 { font-size:22px; margin:0 0 4px; }
+  p { margin:4px 0; color:var(--muted); }
+  .bar { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-top:12px; }
+  input { font:inherit; padding:8px 10px; border:1px solid var(--line); border-radius:8px; min-width:260px; }
+  button { font:inherit; padding:8px 14px; border:0; border-radius:8px; background:var(--accent); color:#fff; cursor:pointer; }
+  .grid { max-width:1100px; margin:0 auto; display:grid; grid-template-columns:repeat(auto-fill, minmax(230px, 1fr)); gap:14px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px; text-align:center; break-inside:avoid; }
+  .card.bad { border-color:#fda29b; }
+  .qr { display:flex; justify-content:center; margin:6px 0 10px; }
+  .qr img, .qr canvas { width:180px; height:180px; }
+  .no { font-weight:700; color:var(--accent); }
+  .bad .no { color:var(--warn); }
+  .name { font-weight:600; }
+  code { font-size:12px; color:var(--muted); word-break:break-all; }
+  .tc { font-size:12px; margin-top:6px; color:var(--muted); }
+  @media print { body { background:#fff; padding:0; } header .bar, header p.tip { display:none; } .card { border-color:#999; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>Mã QR mẫu – test UC05 trên iPhone</h1>
+  <p>20 mã khớp dữ liệu trong <code>SeedData.cs</code> (MaQR = CG0001 … CG0020, theo thứ tự 20 điểm thật) và 2 mã sai để test luồng ngoại lệ.</p>
+  <p class="tip">Mở trang này trên màn hình Mac, dùng nút <b>Quét QR</b> trong app trên iPhone để quét. Cần mạng để tải thư viện vẽ QR.
+  Ô dưới đây nên điền <b>http://&lt;IP-Mac&gt;:5050</b> (IP in ra khi chạy <code>chay_backend_mac.sh</code>) để quét bằng camera thường cũng mở được, và app tự kết nối đúng máy chủ. Cách chắc nhất: dùng trang <b>Mã QR</b> trong Admin – địa chỉ đã tự đúng.</p>
+  <div class="bar">
+    <label for="base">Địa chỉ trong QR:</label>
+    <input id="base" value="http://localhost:5050">
+    <button onclick="render()">Vẽ lại</button>
+    <button onclick="print()">In</button>
+  </div>
+</header>
+<main class="grid" id="grid"></main>
+<script>
+const POINTS = [
+  ["CG0001", "Cổng chính 273 An Dương Vương"],
+  ["CG0002", "Cổng số 6 Nguyễn Trãi"],
+  ["CG0003", "Khu A"],
+  ["CG0004", "Phòng A001"],
+  ["CG0005", "Hội trường A"],
+  ["CG0006", "Khu B (dãy trái)"],
+  ["CG0007", "Khu B (dãy phải)"],
+  ["CG0008", "KLF và khu tự học"],
+  ["CG0009", "Cột cờ"],
+  ["CG0010", "Căn tin"],
+  ["CG0011", "Khu C (dãy trái)"],
+  ["CG0012", "Khu C (dãy phải)"],
+  ["CG0013", "Khu Hiệu bộ"],
+  ["CG0014", "Khu D"],
+  ["CG0015", "Khu E"],
+  ["CG0016", "Bãi giữ xe"],
+  ["CG0017", "Nhà bóng bàn"],
+  ["CG0018", "Sân bóng rổ"],
+  ["CG0019", "Sân cầu lông"],
+  ["CG0020", "Sân bóng đá"],
+];
+function render() {
+  const base = document.getElementById('base').value.trim().replace(/\/+$/, '');
+  const grid = document.getElementById('grid');
+  grid.innerHTML = '';
+  const items = POINTS.map(([c, n], i) => ({ no: i + 1, name: n, text: `${base}/q/${c}`, tc: 'TC05-01 – phát audio + mở chi tiết' }));
+  items.push({ no: '✕', name: 'Mã không tồn tại', text: `${base}/q/CG9999`, tc: 'TC05-02 – báo "Mã QR không hợp lệ"', bad: true });
+  items.push({ no: '✕', name: 'QR không phải của trường', text: 'https://www.sgu.edu.vn', tc: 'TC05-02 – báo "Mã QR không hợp lệ"', bad: true });
+  for (const it of items) {
+    const card = document.createElement('div');
+    card.className = 'card' + (it.bad ? ' bad' : '');
+    card.innerHTML = `<div class="no">${it.no}</div><div class="qr"></div><div class="name">${it.name}</div><code>${it.text}</code><div class="tc">${it.tc}</div>`;
+    grid.appendChild(card);
+    try {
+      new QRCode(card.querySelector('.qr'), { text: it.text, width: 360, height: 360, correctLevel: QRCode.CorrectLevel.M });
+    } catch (e) {
+      card.querySelector('.qr').textContent = 'Không tải được thư viện QR (kiểm tra mạng)';
+    }
+  }
+}
+render();
+</script>
+</body>
+</html>

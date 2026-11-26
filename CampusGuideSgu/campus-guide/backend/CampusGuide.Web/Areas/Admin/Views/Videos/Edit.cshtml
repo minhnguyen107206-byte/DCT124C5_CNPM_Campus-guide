@@ -1,0 +1,24 @@
+@model Video
+@{ ViewData["Title"] = Model.MaVideo == 0 ? "Thêm video" : "Sửa video"; }
+<h3 class="page-title">@ViewData["Title"]</h3>
+<form asp-action="Save" method="post" class="card p-4" style="max-width:760px">
+    <input type="hidden" asp-for="MaVideo" />
+    <div asp-validation-summary="All" class="text-danger small"></div>
+    <label class="form-label">Tiêu đề *</label><input asp-for="TieuDe" class="form-control" required />
+    <label class="form-label mt-2">Đường dẫn video *</label><input asp-for="DuongDan" class="form-control" placeholder="https://www.youtube.com/watch?v=... hoặc https://youtube.com/live/..." required />
+    <label class="form-label mt-2">Mô tả</label><textarea asp-for="MoTa" rows="3" class="form-control"></textarea>
+    <div class="row g-3 mt-1">
+        <div class="col-md-6">
+            <label class="form-label">Gắn với điểm (không bắt buộc)</label>
+            <select asp-for="MaDiem" class="form-select">
+                <option value="">— Không —</option>
+                @foreach (var p in (IEnumerable<dynamic>)ViewBag.Points) { <option value="@p.MaDiem" selected="@(Model.MaDiem == p.MaDiem)">@p.TenDiem</option> }
+            </select>
+        </div>
+        <div class="col-md-4"><label class="form-label">Thời gian phát (nếu là trực tiếp)</label><input asp-for="BatDau" type="datetime-local" class="form-control" /></div>
+        <div class="col-md-2"><label class="form-label">Thứ tự</label><input asp-for="ThuTu" type="number" class="form-control" /></div>
+    </div>
+    <div class="form-check mt-3"><input asp-for="LaTrucTiep" class="form-check-input" /><label asp-for="LaTrucTiep" class="form-check-label">Đây là buổi phát trực tiếp (hiện ở mục "Đang phát trực tiếp")</label></div>
+    <div class="form-check"><input asp-for="HienThi" class="form-check-input" /><label asp-for="HienThi" class="form-check-label">Hiển thị cho người dùng</label></div>
+    <div class="mt-4"><button class="btn btn-primary">Lưu</button> <a asp-action="Index" class="btn btn-light">Hủy</a></div>
+</form>

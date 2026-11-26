@@ -1,0 +1,34 @@
+@model PointListVm
+@{ ViewData["Title"] = S.T("nav_points"); }
+<div class="container-xl">
+    <div class="page-head">
+        <h1>@S.T("nav_points")</h1>
+        <p>@S.T("points_lead")</p>
+    </div>
+    <form method="get" action="/diem" class="search-box my-3" role="search">
+        <i class="bi bi-search"></i>
+        @if (Model.Loai != null) { <input type="hidden" name="loai" value="@Model.Loai" /> }
+        <input type="search" name="q" value="@Model.Q" class="form-control" placeholder="@S.T("search_points")" autocomplete="off" />
+    </form>
+    <div class="chips mb-2">
+        <a class="chip @(Model.Loai == null ? "on" : "")" href="/diem@(string.IsNullOrEmpty(Model.Q) ? "" : "?q=" + Uri.EscapeDataString(Model.Q))">@S.T("all")</a>
+        @foreach (var t in Model.Types)
+        {
+            <a class="chip @(Model.Loai == t.MaLoai ? "on" : "")" href="/diem?loai=@t.MaLoai@(string.IsNullOrEmpty(Model.Q) ? "" : "&q=" + Uri.EscapeDataString(Model.Q))"><i class="bi @SiteContext.Icon(t.BieuTuong)"></i> @t.TenLoai</a>
+        }
+    </div>
+    <div class="d-flex justify-content-between align-items-center mb-3 small text-muted">
+        <span>@S.T("found_n", Model.Points.Count)</span>
+        <a href="/ban-do@(Model.Loai != null ? "?loai=" + Model.Loai : "")" class="fw-semibold text-decoration-none"><i class="bi bi-map"></i> @S.T("view_on_map")</a>
+    </div>
+    @if (Model.Points.Count == 0)
+    {
+        <div class="card-cg empty"><i class="bi bi-search"></i>@S.T("no_results")</div>
+    }
+    <div class="row g-3">
+        @foreach (var p in Model.Points)
+        {
+            <div class="col-12 col-sm-6 col-lg-4 col-xl-3"><partial name="_PointCard" model="p" view-data="ViewData" /></div>
+        }
+    </div>
+</div>

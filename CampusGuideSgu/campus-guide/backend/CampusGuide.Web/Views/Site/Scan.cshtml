@@ -1,0 +1,71 @@
+@{ ViewData["Title"] = S.T("scan_qr"); }
+<div class="container-xl">
+    <div class="scan-wrap">
+        <div class="page-head text-center">
+            <h1>@S.T("scan_qr")</h1>
+            <p>@S.T("scan_lead")</p>
+        </div>
+        <div class="scan-view my-3">
+            <div id="reader"></div>
+            <div class="idle" id="idle">
+                <div>
+                    <i class="bi bi-qr-code-scan display-3 d-block mb-2"></i>
+                    <button type="button" class="btn btn-scan btn-lg px-4" id="startBtn"><i class="bi bi-camera"></i> @S.T("open_camera")</button>
+                    <div class="small mt-3" id="scanMsg"></div>
+                </div>
+            </div>
+            <div class="frame d-none" id="frame"></div>
+        </div>
+        <div class="d-flex gap-2 mb-3">
+            <label class="btn btn-outline-primary flex-fill rounded-pill"><i class="bi bi-image"></i> @S.T("scan_from_image")<input type="file" accept="image/*" id="fileInput" hidden /></label>
+            <button type="button" class="btn btn-outline-secondary rounded-pill d-none" id="stopBtn"><i class="bi bi-stop-circle"></i></button>
+        </div>
+        <form method="post" asp-antiforgery="true" action="/quet" class="card-cg p-3">
+            <label class="form-label fw-semibold small" for="code">@S.T("enter_code")</label>
+            <div class="input-group">
+                <input class="form-control" id="code" name="code" placeholder="CG0001" autocomplete="off" autocapitalize="characters" required />
+                <button class="btn btn-primary">@S.T("go")</button>
+            </div>
+        </form>
+    </div>
+</div>
+@section Scripts {
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js" defer></script>
+<script>
+window.addEventListener('load', function () {
+    var T = { insecure: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(S.T("cam_insecure"))), denied: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(S.T("cam_denied"))), notqr: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(S.T("qr_invalid"))) };
+    var msg = document.getElementById('scanMsg'), idle = document.getElementById('idle'), frame = document.getElementById('frame'), stopBtn = document.getElementById('stopBtn');
+    var qr = window.Html5Qrcode ? new Html5Qrcode('reader') : null, busy = false;
+    function codeOf(text) {
+        text = (text || '').trim();
+        var m = text.match(/\/q\/([A-Za-z0-9_-]+)/) || text.match(/\/diem\/qr\/([A-Za-z0-9_-]+)/);
+        if (m) return m[1];
+        if (/^[A-Za-z0-9_-]{4,40}$/.test(text)) return text;
+        return null;
+    }
+    function done(text) {
+        if (busy) return;
+        var c = codeOf(text);
+        if (!c) { msg.textContent = T.notqr; return; }
+        busy = true;
+        if (navigator.vibrate) navigator.vibrate(60);
+        location.href = '/diem/qr/' + encodeURIComponent(c);
+    }
+    function stop() { if (qr && qr.isScanning) qr.stop().catch(function () {}); idle.classList.remove('d-none'); frame.classList.add('d-none'); stopBtn.classList.add('d-none'); }
+    document.getElementById('startBtn').addEventListener('click', function () {
+        if (!window.isSecureContext) { msg.textContent = T.insecure; return; }
+        if (!qr) { msg.textContent = T.denied; return; }
+        qr.start({ facingMode: 'environment' }, { fps: 10, qrbox: function (w, h) { var s = Math.floor(Math.min(w, h) * 0.64); return { width: s, height: s }; } }, done, function () {})
+          .then(function () { idle.classList.add('d-none'); frame.classList.remove('d-none'); stopBtn.classList.remove('d-none'); })
+          .catch(function () { msg.textContent = T.denied; });
+    });
+    stopBtn.addEventListener('click', stop);
+    document.getElementById('fileInput').addEventListener('change', function (e) {
+        var f = e.target.files[0];
+        if (!f || !qr) return;
+        stop();
+        qr.scanFile(f, false).then(done).catch(function () { msg.textContent = T.notqr; });
+    });
+});
+</script>
+}

@@ -1,0 +1,9 @@
+bin/
+obj/
+*.db
+*.db-shm
+*.db-wal
+CampusGuide.Web/wwwroot/media/
+appsettings.Development.json
+*.user
+.vs/

@@ -1,0 +1,155 @@
+@model Diem
+@using Microsoft.EntityFrameworkCore
+@inject CampusGuide.Web.Data.AppDbContext Db
+@{
+    ViewData["Title"] = "Mã QR – " + Model.TenDiem;
+    // Tự lấy dữ liệu nếu controller chưa nạp (không cần sửa PointsController)
+    var langs = ViewBag.Langs as List<NgonNgu>
+                ?? await Db.NgonNgus.AsNoTracking().Where(n => n.KichHoat).OrderBy(n => n.ThuTu).ToListAsync();
+    if (Model.LoaiDiem == null) Model.LoaiDiem = await Db.LoaiDiems.FindAsync(Model.MaLoai);
+    if (Model.NoiDungs.Count == 0) Model.NoiDungs = await Db.NoiDungs.AsNoTracking().Where(n => n.MaDiem == Model.MaDiem).ToListAsync();
+    string link = ViewBag.Link;
+    var lat = Model.ViDo.ToString(System.Globalization.CultureInfo.InvariantCulture);
+    var lng = Model.KinhDo.ToString(System.Globalization.CultureInfo.InvariantCulture);
+    // Trạng thái nội dung theo từng ngôn ngữ: Gốc / Đã duyệt / Chờ duyệt / Chưa có
+    (string text, string cls, string icon) LangState(string ma)
+    {
+        var nd = Model.NoiDungs.Where(n => n.MaNgonNgu == ma).OrderByDescending(n => n.TrangThai == TrangThaiNoiDung.Goc || n.TrangThai == TrangThaiNoiDung.DaDuyet).FirstOrDefault();
+        return nd?.TrangThai switch
+        {
+            TrangThaiNoiDung.Goc => ("Bản gốc", "success", "bi-check-circle-fill"),
+            TrangThaiNoiDung.DaDuyet => ("Đã duyệt", "success", "bi-check-circle-fill"),
+            TrangThaiNoiDung.ChoDuyet => ("Chờ duyệt", "warning", "bi-hourglass-split"),
+            null => ("Dịch khi quét", "secondary", "bi-magic"),
+            _ => ("Cần xem lại", "danger", "bi-exclamation-circle"),
+        };
+    }
+}
+@section Head {
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+    .qr-poster { border-radius: 22px; overflow: hidden; background: #fff; box-shadow: 0 12px 32px rgb(16 37 66 / 14%); }
+    .qr-poster .top { background: linear-gradient(135deg, #1d3c78 0%, #2f5597 55%, #3d7fd1 100%); color: #fff; padding: 22px 24px 70px; position: relative; }
+    .qr-poster .top::after { content: ""; position: absolute; right: -40px; top: -40px; width: 160px; height: 160px; border-radius: 50%; background: rgb(255 255 255 / 8%); }
+    .qr-poster .brand { font-size: .8rem; letter-spacing: .08em; text-transform: uppercase; opacity: .85; }
+    .qr-poster .name { font-size: 1.45rem; font-weight: 700; margin: 6px 0 2px; line-height: 1.25; }
+    .qr-poster .type { display: inline-block; background: rgb(255 255 255 / 18%); border-radius: 20px; padding: 2px 12px; font-size: .82rem; }
+    .qr-poster .code-box { margin: -52px auto 0; width: 270px; background: #fff; border-radius: 20px; padding: 14px; position: relative;
+        box-shadow: 0 10px 26px rgb(16 37 66 / 18%); border: 3px solid #e6edf9; }
+    .qr-poster .code-box img { width: 100%; display: block; }
+    .qr-poster .scan { text-align: center; padding: 14px 20px 6px; }
+    .qr-poster .scan .big { font-weight: 700; color: #1d3c78; font-size: 1.05rem; }
+    .qr-poster .flags { font-size: 1.4rem; letter-spacing: 4px; }
+    .qr-poster .bottom { display: flex; justify-content: space-between; align-items: center; background: #f3f6fc; padding: 10px 20px; font-size: .82rem; color: #5b6b82; }
+    .qr-poster .bottom code { font-size: .95rem; color: #1d3c78; font-weight: 700; }
+    .info-card { border-radius: 18px; border: 0; box-shadow: 0 6px 20px rgb(16 37 66 / 8%); }
+    .info-card .hero { height: 150px; object-fit: cover; width: 100%; border-radius: 18px 18px 0 0; }
+    .info-card .hero-empty { height: 110px; border-radius: 18px 18px 0 0; background: linear-gradient(135deg, #e6edf9, #cfdcf3); display: flex; align-items: center; justify-content: center; color: #2f5597; font-size: 2.6rem; }
+    .stat { display: flex; gap: 10px; align-items: flex-start; padding: 8px 0; border-bottom: 1px dashed #e3e8f2; }
+    .stat:last-child { border-bottom: 0; }
+    .stat i { color: #2f5597; font-size: 1.1rem; margin-top: 2px; }
+    .stat .lbl { font-size: .78rem; color: #7a879c; }
+    #mini-map { height: 220px; border-radius: 14px; }
+    .lang-row { display: flex; align-items: center; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid #f0f2f7; }
+    .lang-row:last-child { border-bottom: 0; }
+    .step { display: flex; gap: 12px; margin-bottom: 10px; }
+    .step .n { flex: 0 0 28px; height: 28px; border-radius: 50%; background: #2f5597; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: .85rem; }
+</style>
+}
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+    <h3 class="page-title mb-0"><i class="bi bi-qr-code"></i> Mã QR: @Model.TenDiem</h3>
+    <a asp-action="Index" class="btn btn-light"><i class="bi bi-arrow-left"></i> Danh sách điểm</a>
+</div>
+
+<div class="row g-4">
+    <!-- Cột trái: poster QR -->
+    <div class="col-lg-5 col-xl-4">
+        <div class="qr-poster" id="poster">
+            <div class="top">
+                <div class="brand"><i class="bi bi-geo-alt-fill"></i> CampusGuide · ĐH Sài Gòn</div>
+                <div class="name">@Model.TenDiem</div>
+                <span class="type">@(Model.LoaiDiem?.TenLoai ?? "Điểm thuyết minh")</span>
+            </div>
+            <div class="code-box"><img src="/admin/points/qrpng/@Model.MaDiem" alt="QR" /></div>
+            <div class="scan">
+                <div class="big"><i class="bi bi-phone"></i> Quét để nghe thuyết minh & chỉ đường</div>
+                <div class="small text-muted mb-1">Scan to listen · 스캔하여 듣기 · スキャンして聞く · 扫码收听</div>
+                <div class="flags">@foreach (var l in langs) { <span title="@l.TenNgonNgu">@l.Co</span> }</div>
+            </div>  
+        </div>
+
+        <div class="d-grid gap-2 mt-3">
+            <div class="btn-group">
+                <a class="btn btn-primary" href="/admin/points/qrpng/@Model.MaDiem?download=true"><i class="bi bi-download"></i> Tải PNG</a>
+                <a class="btn btn-outline-primary" href="/admin/points/qrsheet?ids=@Model.MaDiem" target="_blank"><i class="bi bi-printer"></i> In</a>
+            </div>
+            <form method="post" asp-action="QrRegenerate" asp-route-id="@Model.MaDiem" class="d-grid" onsubmit="return confirm('Mã cũ sẽ không còn hiệu lực. Tiếp tục?')">
+                <button class="btn btn-outline-danger btn-sm"><i class="bi bi-arrow-repeat"></i> Sinh lại mã</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Cột phải: thông tin + bản đồ + ngôn ngữ -->
+    <div class="col-lg-7 col-xl-8">
+        <div class="row g-4">
+            <div class="col-xl-6">
+                <div class="card info-card h-100">
+                    @if (!string.IsNullOrEmpty(Model.HinhAnh))
+                    { <img class="hero" src="@Model.HinhAnh" alt="" /> }
+                    else
+                    { <div class="hero-empty"><i class="bi bi-building"></i></div> }
+                    <div class="card-body">
+                        <div class="stat"><i class="bi bi-link-45deg"></i><div class="flex-grow-1" style="min-width:0">
+                            <div class="lbl">Liên kết trong mã QR</div>
+                            <div class="input-group input-group-sm mt-1">
+                                <input class="form-control" id="qr-link" value="@link" readonly />
+                                <button class="btn btn-outline-secondary" type="button" onclick="navigator.clipboard.writeText(document.getElementById('qr-link').value);this.innerHTML='<i class=\'bi bi-check2\'></i>'"><i class="bi bi-clipboard"></i></button>
+                            </div></div></div>
+                        @if (!string.IsNullOrWhiteSpace(Model.Tang))
+                        { <div class="stat"><i class="bi bi-layers"></i><div><div class="lbl">Tầng / vị trí</div>@Model.Tang</div></div> }
+                        @if (!string.IsNullOrWhiteSpace(Model.GioLamViec))
+                        { <div class="stat"><i class="bi bi-clock"></i><div><div class="lbl">Giờ làm việc</div>@Model.GioLamViec</div></div> }
+                        <div class="stat"><i class="bi bi-crosshair"></i><div><div class="lbl">Toạ độ · bán kính kích hoạt</div>@lat, @lng · @Model.BanKinh m</div></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-6">
+                <div class="card info-card h-100"><div class="card-body">
+                    <h6 class="fw-bold mb-2"><i class="bi bi-map"></i> Vị trí trên bản đồ</h6>
+                    <div id="mini-map"></div>
+                    <div class="small text-muted mt-2">Người quét sẽ được chỉ đường từ chỗ họ đang đứng tới điểm này.</div>
+                </div></div>
+            </div>
+            <div class="col-xl-6">
+                <div class="card info-card h-100"><div class="card-body">
+                    <h6 class="fw-bold mb-2"><i class="bi bi-translate"></i> Ngôn ngữ thuyết minh</h6>
+                    @foreach (var l in langs)
+                    {
+                        var st = LangState(l.MaNgonNgu);
+                        <div class="lang-row">
+                            <span>@l.Co @l.TenNgonNgu</span>
+                            <span class="d-flex align-items-center gap-2">
+                                <span class="badge text-bg-@st.cls"><i class="bi @st.icon"></i> @st.text</span>
+                                <a class="small" href="@link?lang=@l.MaNgonNgu" target="_blank" title="Xem thử"><i class="bi bi-box-arrow-up-right"></i></a>
+                            </span>
+                        </div>
+                    }
+                </div></div>
+            </div>  
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+    (function () {
+        const p = [@lat, @lng];
+        const map = L.map('mini-map', { zoomControl: false, attributionControl: false, maxZoom: 21 }).setView(p, 18);
+        L.tileLayer('https://mt{s}.google.com/vt/lyrs=y&hl=vi&x={x}&y={y}&z={z}', { subdomains: '0123', maxZoom: 21 }).addTo(map);
+        L.circle(p, { radius: @Model.BanKinh, color: '#3d7fd1', weight: 2, fillOpacity: .15 }).addTo(map);
+        L.marker(p).addTo(map);
+    })();
+</script>
+}

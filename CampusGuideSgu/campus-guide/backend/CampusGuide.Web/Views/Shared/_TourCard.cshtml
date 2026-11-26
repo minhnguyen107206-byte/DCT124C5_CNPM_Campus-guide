@@ -1,0 +1,20 @@
+@model SiteTour
+<a class="tcard" href="/tour/@Model.T.MaTour">
+    @if (Model.Cover != null)
+    {
+        <img src="@Model.Cover" alt="" loading="lazy" decoding="async" />
+    }
+    else
+    {
+        <picture><source type="image/webp" srcset="/site/img/sgu-800.webp" /><img src="/site/img/sgu-800.jpg" alt="" loading="lazy" decoding="async" width="800" height="450" /></picture>
+    }
+    <div class="in">
+        <span class="badge bg-warning text-dark align-self-start"><i class="bi bi-lightning-charge-fill"></i> @S.T("tour_badge")</span>
+        <h3>@Model.T.TenTour</h3>
+        <div class="stats">
+            <span><i class="bi bi-geo-alt"></i> @Model.Stops @S.T("stops")</span>
+            <span><i class="bi bi-clock"></i> @Model.T.ThoiLuong @S.T("min")</span>
+            <span><i class="bi bi-person-walking"></i> @(Model.T.QuangDuong >= 1000 ? (Model.T.QuangDuong / 1000.0).ToString("0.0") + " km" : Model.T.QuangDuong + " m")</span>
+        </div>
+    </div>
+</a>

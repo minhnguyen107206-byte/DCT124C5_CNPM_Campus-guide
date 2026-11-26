@@ -1,0 +1,23 @@
+@model List<SiteTour>
+@{ ViewData["Title"] = S.T("nav_tours"); }
+<div class="container-xl">
+    <div class="page-head"><h1>@S.T("nav_tours")</h1><p>@S.T("tours_lead")</p></div>
+    <div class="chips my-3">
+        <span class="chip"><i class="bi bi-person-badge"></i> @S.T("aud_visitor")</span>
+        <span class="chip"><i class="bi bi-mortarboard"></i> @S.T("aud_freshman")</span>
+        <span class="chip"><i class="bi bi-people"></i> @S.T("aud_alumni")</span>
+    </div>
+    @if (Model.Count == 0) { <div class="card-cg empty"><i class="bi bi-signpost"></i>@S.T("no_tours")</div> }
+    <div class="row g-3">
+        @foreach (var t in Model)
+        {
+            <div class="col-12 col-md-6 col-xl-4">
+                <partial name="_TourCard" model="t" />
+                <div class="card-cg p-3 mt-n2 pt-4" style="border-radius:0 0 18px 18px">
+                    @if (!string.IsNullOrWhiteSpace(t.T.MoTa)) { <p class="small text-muted mb-2">@t.T.MoTa</p> }
+                    <div class="small text-truncate"><i class="bi bi-geo-alt text-primary"></i> @string.Join(" → ", t.StopNames.Take(5))@(t.StopNames.Count > 5 ? " …" : "")</div>
+                </div>
+            </div>
+        }
+    </div>
+</div>

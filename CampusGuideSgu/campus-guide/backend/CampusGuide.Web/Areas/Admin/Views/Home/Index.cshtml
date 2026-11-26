@@ -1,0 +1,30 @@
+@{ ViewData["Title"] = "Tổng quan"; }
+<h3 class="page-title">Tổng quan</h3>
+@if (ViewBag.Demo == true)
+{
+    <div class="alert alert-warning"><i class="bi bi-info-circle"></i> Đang dùng <b>dịch giả lập</b> (<code>Translation:Provider = Demo</code>): bản dịch có dạng
+        <code>[en] văn bản gốc</code>. Đổi thành <code>MyMemory</code> để dịch thật.</div>
+}
+else
+{
+    
+}
+<div class="row g-3 mb-4">
+    <div class="col-md-4 col-xl-2"><div class="card p-3 stat"><div class="text-muted small">Điểm thuyết minh</div><div class="num">@ViewBag.Points</div><div class="small">@ViewBag.Published đã xuất bản</div></div></div>
+    <div class="col-md-4 col-xl-2"><div class="card p-3 stat"><div class="text-muted small">Bản dịch chờ duyệt</div><div class="num">@ViewBag.Pending</div><a href="/admin/translations" class="small">Duyệt ngay</a></div></div>
+    <div class="col-md-4 col-xl-2"><div class="card p-3 stat"><div class="text-muted small">Tour</div><div class="num">@ViewBag.Tours</div></div></div>
+    <div class="col-md-4 col-xl-2"><div class="card p-3 stat"><div class="text-muted small"><span class="text-success">●</span> Đang truy cập / đang nghe</div><div class="num" id="homeLiveCount">–</div><a href="/admin/live" class="small">Xem trực tiếp</a></div></div>
+    <div class="col-md-4 col-xl-2"><div class="card p-3 stat"><div class="text-muted small">Lượt nghe 7 ngày</div><div class="num">@ViewBag.Listens7</div></div></div>
+    <div class="col-md-4 col-xl-2"><div class="card p-3 stat"><div class="text-muted small">Thông báo đang hiệu lực</div><div class="num">@ViewBag.Notices</div></div></div>
+    <div class="col-md-4 col-xl-2"><div class="card p-3 stat"><div class="text-muted small">Thông báo đẩy</div><div class="num" style="font-size:1.2rem">@(ViewBag.PushOn == true ? "Đã bật" : "Chưa cấu hình")</div></div></div>
+</div>
+<div class="card p-4">
+    <h5>Quy trình nội dung</h5>
+    <ol class="mb-0">
+        <li><a href="/admin/points/create">Thêm điểm</a>: tên, loại, vị trí trên bản đồ, bán kính, ảnh.</li>
+        <li>Nhập nội dung thuyết minh tiếng Việt rồi bấm <b>Lưu &amp; dịch ngay</b>.</li>
+        <li><a href="/admin/translations">Duyệt bản dịch</a>: nghe thử, sửa nếu cần, bấm Duyệt.</li>
+        <li>Xuất bản điểm, in <b>mã QR</b> dán tại điểm.</li>
+        <li>Tạo <a href="/admin/tours">tour</a> và xuất bản gói offline.</li>
+    </ol>
+</div>

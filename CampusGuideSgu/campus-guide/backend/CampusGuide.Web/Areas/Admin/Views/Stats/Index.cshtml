@@ -1,0 +1,61 @@
+@model StatsResult
+@{
+    ViewData["Title"] = "Thống kê";
+    StatsFilter f = ViewBag.Filter;
+    List<Diem> points = ViewBag.Points; List<NgonNgu> langs = ViewBag.Langs;
+    var q = $"From={f.From:yyyy-MM-dd}&To={f.To:yyyy-MM-dd}&MaDiem={f.MaDiem}&Lang={f.Lang}&Source={f.Source}";
+}
+<h3 class="page-title">Thống kê</h3>
+<form method="get" class="card p-3 mb-3">
+    <div class="row g-2 align-items-end">
+        <div class="col-md-2"><label class="form-label small">Từ ngày</label><input type="date" name="From" value="@f.From.ToString("yyyy-MM-dd")" class="form-control" /></div>
+        <div class="col-md-2"><label class="form-label small">Đến ngày</label><input type="date" name="To" value="@f.To.ToString("yyyy-MM-dd")" class="form-control" /></div>
+        <div class="col-md-3"><label class="form-label small">Điểm</label>
+            <select name="MaDiem" class="form-select"><option value="">Tất cả</option>
+                @foreach (var p in points) { <option value="@p.MaDiem" selected="@(f.MaDiem == p.MaDiem)">@p.TenDiem</option> }</select></div>
+        <div class="col-md-2"><label class="form-label small">Ngôn ngữ</label>
+            <select name="Lang" class="form-select"><option value="">Tất cả</option>
+                @foreach (var l in langs) { <option value="@l.MaNgonNgu" selected="@(f.Lang == l.MaNgonNgu)">@l.TenNgonNgu</option> }</select></div>
+        <div class="col-md-1"><label class="form-label small">Nguồn</label>
+            <select name="Source" class="form-select"><option value="">Tất cả</option>
+                @foreach (var s in new[] { NguonNghe.QR, NguonNghe.GPS, NguonNghe.Tour, NguonNghe.DanhSach }) { <option selected="@(f.Source == s)">@s</option> }</select></div>
+        <div class="col-md-2 d-flex gap-1"><button class="btn btn-primary w-100">Xem</button>
+            <a class="btn btn-outline-success" href="/admin/stats/export?@q" title="Xuất Excel"><i class="bi bi-file-earmark-excel"></i></a></div>
+    </div>
+</form>
+<div class="row g-3 mb-3">
+    <div class="col-md-3"><div class="card p-3 stat"><div class="text-muted small">Tổng lượt nghe</div><div class="num">@Model.TotalListens</div></div></div>
+    <div class="col-md-3"><div class="card p-3 stat"><div class="text-muted small">Lượt quét QR</div><div class="num">@Model.QrScans</div></div></div>
+    <div class="col-md-3"><div class="card p-3 stat"><div class="text-muted small">Số thiết bị</div><div class="num">@Model.Devices</div></div></div>
+    <div class="col-md-3"><div class="card p-3 stat"><div class="text-muted small">Đánh giá trung bình</div><div class="num">@(Model.AvgRating?.ToString("0.0") ?? "–")</div></div></div>
+</div>
+@if (Model.TotalListens == 0) { <div class="alert alert-info">Không có dữ liệu trong khoảng đã chọn (E1).</div> }
+<div class="row g-3">
+    <div class="col-lg-8"><div class="card p-3"><h6>Lượt nghe theo ngày</h6><canvas id="byDay" height="110"></canvas></div></div>
+    <div class="col-lg-4"><div class="card p-3"><h6>Theo ngôn ngữ</h6><canvas id="byLang" height="180"></canvas>
+        <h6 class="mt-3">Theo nguồn</h6><canvas id="bySrc" height="140"></canvas></div></div>
+</div>
+<div class="card mt-3">
+    <div class="p-3 pb-0"><h6>10 điểm được nghe nhiều nhất</h6></div>
+    <table class="table mb-0">
+        <thead><tr><th>#</th><th>Điểm</th><th>Lượt nghe</th><th>Quét QR</th><th>Đánh giá</th><th></th></tr></thead>
+        @{ int i = 0; }
+        @foreach (var p in Model.TopPoints)
+        {
+            i++;
+            <tr><td>@i</td><td class="fw-semibold">@p.Name</td><td>@p.Listens</td><td>@p.Qr</td>
+                <td>@(p.Rating?.ToString("0.0") ?? "–") <span class="small text-muted">(@p.RatingCount)</span></td>
+                <td class="text-end"><a href="/admin/stats/point/@p.Id">Chi tiết</a></td></tr>
+        }
+    </table>
+</div>
+@section Scripts {
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+const byDay = @Json.Serialize(Model.ByDay), byLang = @Json.Serialize(Model.ByLang), bySrc = @Json.Serialize(Model.BySource);
+const blue = '#2f5597';
+new Chart(document.getElementById('byDay'), { type: 'line', data: { labels: byDay.map(x => x.name), datasets: [{ label: 'Lượt nghe', data: byDay.map(x => x.count), borderColor: blue, backgroundColor: 'rgba(47,85,151,.12)', fill: true, tension: .25 }] }, options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } } });
+const bar = (id, rows) => new Chart(document.getElementById(id), { type: 'bar', data: { labels: rows.map(x => x.name), datasets: [{ data: rows.map(x => x.count), backgroundColor: blue }] }, options: { indexAxis: 'y', plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, ticks: { precision: 0 } } } } });
+bar('byLang', byLang); bar('bySrc', bySrc);
+</script>
+}

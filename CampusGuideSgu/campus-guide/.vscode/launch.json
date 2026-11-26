@@ -1,0 +1,35 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Backend (cổng 5000 – Windows)",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build",
+      "program": "${workspaceFolder}/backend/CampusGuide.Web/bin/Debug/net8.0/CampusGuide.Web.dll",
+      "args": ["--urls", "http://0.0.0.0:5000"],
+      "cwd": "${workspaceFolder}/backend/CampusGuide.Web",
+      "env": { "ASPNETCORE_ENVIRONMENT": "Development" },
+      "serverReadyAction": {
+        "action": "openExternally",
+        "pattern": "Now listening on:\\s+https?://\\S+:([0-9]+)",
+        "uriFormat": "http://localhost:%s/admin"
+      }
+    },
+    {
+      "name": "Backend trên Mac (cổng 5050 – tránh AirPlay)",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build",
+      "program": "${workspaceFolder}/backend/CampusGuide.Web/bin/Debug/net8.0/CampusGuide.Web.dll",
+      "args": ["--urls", "http://0.0.0.0:5050"],
+      "cwd": "${workspaceFolder}/backend/CampusGuide.Web",
+      "env": { "ASPNETCORE_ENVIRONMENT": "Development" },
+      "serverReadyAction": {
+        "action": "openExternally",
+        "pattern": "Now listening on:\\s+https?://\\S+:([0-9]+)",
+        "uriFormat": "http://localhost:%s/admin"
+      }
+    }
+  ]
+}
