@@ -1,0 +1,12 @@
+@model List<DanhGia>
+@{ Diem d = ViewBag.Point; List<NameCount> byLang = ViewBag.ByLang; ViewData["Title"] = "Thống kê – " + d.TenDiem; }
+<h3 class="page-title">@d.TenDiem</h3>
+<div class="row g-3">
+    <div class="col-md-4"><div class="card p-3"><h6>Lượt nghe theo ngôn ngữ</h6>
+        <table class="table table-sm mb-0">@foreach (var r in byLang) { <tr><td>@r.Name</td><td class="text-end">@r.Count</td></tr> }</table></div></div>
+    <div class="col-md-8"><div class="card p-3"><h6>Đánh giá (@Model.Count) – trung bình @(Model.Count > 0 ? Model.Average(x => x.SoSao).ToString("0.0") : "–")</h6>
+        <table class="table table-sm mb-0">
+            @foreach (var r in Model) { <tr><td style="width:110px">@(new string('★', r.SoSao))@(new string('☆', 5 - r.SoSao))</td><td>@r.NhanXet</td><td class="small text-muted text-end">@r.ThoiGian.ToLocalTime().ToString("dd/MM/yyyy")</td></tr> }
+        </table></div></div>
+</div>
+<a href="/admin/stats" class="btn btn-light mt-3">← Thống kê</a>
