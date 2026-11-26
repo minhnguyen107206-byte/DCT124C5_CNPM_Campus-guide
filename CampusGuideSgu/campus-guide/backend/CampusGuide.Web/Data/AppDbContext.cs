@@ -64,7 +64,7 @@ public class AppDbContext : DbContext
         {
             e.ToTable("Audio");
             e.HasOne(x => x.NoiDung).WithMany(n => n.Audios).HasForeignKey(x => x.MaNoiDung);
-            e.HasOne(x => x.GiongDoc).WithMany().HasForeignKey(x => x.MaGiong).OnDelete(DeleteBehavior.SetNull);
+            e.HasOne(x => x.GiongDoc).WithMany().HasForeignKey(x => x.MaGiong).OnDelete(DeleteBehavior.ClientSetNull);   //SQL Server không cho 2 đường xoá dây chuyền tới Audio
         });
         b.Entity<ThuatNgu>(e =>
         {
