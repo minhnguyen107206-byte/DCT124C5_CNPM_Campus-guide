@@ -14,12 +14,14 @@ System.Globalization.CultureInfo.DefaultThreadCurrentUICulture = System.Globaliz
 var builder = WebApplication.CreateBuilder(args);
 var cfg = builder.Configuration;
 
-// ---------- CSDL: SQLite (mặc định, không cần cài) hoặc PostgreSQL ----------
-var provider = cfg["Database:Provider"] ?? "Sqlite";
-var conn = cfg["Database:ConnectionString"] ?? "Data Source=campusguide.db";
+// ---------- CSDL: SQL Server (mặc định) ----------
+var provider = cfg["Database:Provider"] ?? "SqlServer";
+var conn = cfg["Database:ConnectionString"] ?? "Server=localhost;Database=CampusGuide;Trusted_Connection=True;TrustServerCertificate=True";
 builder.Services.AddDbContext<AppDbContext>(o =>
 {
-    if (provider.Equals("Postgres", StringComparison.OrdinalIgnoreCase))
+    if (provider.Equals("SqlServer", StringComparison.OrdinalIgnoreCase))
+        o.UseSqlServer(conn, s => s.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery));
+    else if (provider.Equals("Postgres", StringComparison.OrdinalIgnoreCase))
         o.UseNpgsql(conn, s => s.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery));
     else
         o.UseSqlite(conn, s => s.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery));
@@ -100,6 +102,12 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     db.Database.EnsureCreated();
+    //Lần đầu chạy SQL Server (CSDL còn trống): chép toàn bộ dữ liệu cũ từ campusguide.db sang
+    if (db.Database.IsSqlServer()) {
+        var nguon = cfg["Database:ImportFromSqlite"];
+        if (!string.IsNullOrWhiteSpace(nguon) && await SqliteImporter.RunAsync(db, nguon))
+            Console.WriteLine($"[SQL Server] Đã chép dữ liệu từ {nguon} sang SQL Server.");
+    }
     await SchemaUpdater.RunAsync(db);   // thêm bảng mới (LuotTruyCap) vào CSDL đã có sẵn, không mất dữ liệu
     await SeedData.RunAsync(db);
     var (tbMau, videoMau) = await SeedData.RunSamplesAsync(db);   // thông báo + video mẫu: chỉ thêm mục chưa có

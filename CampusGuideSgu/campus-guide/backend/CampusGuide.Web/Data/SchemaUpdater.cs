@@ -71,6 +71,18 @@ public static class SchemaUpdater
                 END;
                 """);
         }
+        else if (db.Database.IsSqlServer()) {
+            //EnsureCreated đã tạo đủ bảng; xoá điểm thì khoá ngoại tự xoá dây chuyền nên không cần trigger.
+            //Chỉ thêm ràng buộc bán kính 0–30 m
+            await db.Database.ExecuteSqlRawAsync("""
+                IF OBJECT_ID(N'CK_Diem_BanKinh', N'C') IS NULL
+                BEGIN
+                    UPDATE [Diem] SET [BanKinh] = 30 WHERE [BanKinh] > 30;
+                    UPDATE [Diem] SET [BanKinh] = 0 WHERE [BanKinh] < 0;
+                    ALTER TABLE [Diem] ADD CONSTRAINT [CK_Diem_BanKinh] CHECK ([BanKinh] BETWEEN 0 AND 30);
+                END
+                """);
+        }
         else
         {
             await db.Database.ExecuteSqlRawAsync("""
