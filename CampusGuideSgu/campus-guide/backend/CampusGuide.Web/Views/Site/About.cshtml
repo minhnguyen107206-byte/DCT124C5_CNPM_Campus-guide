@@ -1,0 +1,18 @@
+@{ ViewData["Title"] = S.T("about"); }
+<div class="container-xl">
+    <div class="page-head"><h1>@S.T("about_title")</h1><p>@S.T("sgu_full")</p></div>
+    <div class="row g-4 mt-1">
+        <div class="col-lg-7">
+            <picture><source type="image/webp" srcset="/site/img/sgu-800.webp" /><img src="/site/img/sgu-800.jpg" class="w-100 rounded-4 mb-3" alt="@S.T("sgu_full")" loading="lazy" width="800" height="450" /></picture>
+            <div class="prose">@S.T("about_text")</div>
+        </div>
+        <div class="col-lg-5">
+            <div class="card-cg p-4">
+                <h2 class="h6 fw-800">@S.T("how_title")</h2>
+                <ol class="mb-0 ps-3 small lh-lg">
+                    <li>@S.T("how_1")</li><li>@S.T("how_2")</li><li>@S.T("how_3")</li><li>@S.T("how_4")</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,18 @@
+@model List<Diem>
+@{ ViewData["Title"] = "In mã QR"; }
+<div class="no-print mb-3 d-flex gap-2">
+    <button class="btn btn-primary" onclick="window.print()"><i class="bi bi-printer"></i> In / Lưu PDF</button>
+    <a href="/admin/points" class="btn btn-light">← Quay lại</a>
+</div>
+<div class="qr-sheet">
+    @foreach (var d in Model)
+    {
+        <div class="qr-card">
+            <div style="font-weight:700;color:#2f5597">CampusGuide · Trường Đại học Sài Gòn</div>
+            <img src="/admin/points/qrpng/@d.MaDiem" style="width:55mm" />
+            <div style="font-size:18px;font-weight:700">@d.TenDiem</div>
+            <div style="font-size:12px">Quét mã để nghe thuyết minh · Scan to listen</div>
+        </div>
+    }
+</div>
+@if (Model.Count == 0) { <div class="alert alert-info">Chưa chọn điểm nào.</div> }

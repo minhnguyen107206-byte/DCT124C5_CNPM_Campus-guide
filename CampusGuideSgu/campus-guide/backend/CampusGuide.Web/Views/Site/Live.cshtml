@@ -1,0 +1,60 @@
+@model LiveVm
+@{ ViewData["Title"] = S.T("nav_live"); var lives = Model.Videos.Where(v => v.LaTrucTiep).ToList(); var vids = Model.Videos.Where(v => !v.LaTrucTiep).ToList(); }
+<div class="container-xl">
+    <div class="page-head"><h1>@S.T("nav_live")</h1><p>@S.T("live_lead")</p></div>
+    <div class="live-stat my-3">
+        <div class="row align-items-center g-3">
+            <div class="col-6 col-md-3"><div class="small opacity-75"><span class="dot-live"></span>@S.T("visitors_now")</div><b id="liveOnline">@Model.Online</b></div>
+            <div class="col-6 col-md-3"><div class="small opacity-75"><i class="bi bi-headphones"></i> @S.T("listening_now")</div><b id="liveListen">@Model.Listening</b></div>
+            <div class="col-md-6">
+                <div class="small opacity-75 mb-1">@S.T("busy_points")</div>
+                <div id="liveTop" class="d-flex flex-wrap gap-1">
+                    @foreach (var p in Model.TopPoints) { <a class="badge rounded-pill text-bg-light text-decoration-none" href="/diem/@p.PointId">@p.Name · @p.TruyCap</a> }
+                    @if (Model.TopPoints.Count == 0) { <span class="small opacity-75">—</span> }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (lives.Count > 0)
+    {
+        <h2 class="h5 fw-800 mt-4 mb-3"><span class="dot-live"></span> @S.T("live_now")</h2>
+        <div class="row g-3">
+            @foreach (var v in lives)
+            {
+                <div class="col-lg-8"><div class="vcard"><partial name="_VideoFrame" model="v" />
+                    <div class="p-3"><h3 class="h6 fw-bold mb-1">@v.TieuDe</h3>
+                        @if (v.BatDau != null) { <div class="small text-muted"><i class="bi bi-calendar-event"></i> @SiteContext.Local(v.BatDau.Value)</div> }
+                        <p class="small text-muted mb-0">@v.MoTa</p></div></div></div>
+            }
+        </div>
+    }
+
+    <h2 class="h5 fw-800 mt-4 mb-3"><i class="bi bi-collection-play text-primary"></i> @S.T("intro_videos")</h2>
+    @if (vids.Count == 0 && lives.Count == 0) { <div class="card-cg empty"><i class="bi bi-camera-video-off"></i>@S.T("no_videos")</div> }
+    <div class="row g-3">
+        @foreach (var v in vids)
+        {
+            <div class="col-sm-6 col-lg-4"><div class="vcard"><partial name="_VideoFrame" model="v" />
+                <div class="p-3"><h3 class="h6 fw-bold mb-1">@v.TieuDe</h3>
+                    @if (v.Diem != null) { <a class="small text-decoration-none" href="/diem/@v.MaDiem"><i class="bi bi-geo-alt"></i> @v.Diem.TenDiem</a> }
+                    <p class="small text-muted mb-0">@v.MoTa</p></div></div></div>
+        }
+    </div>
+</div>
+@section Scripts {
+<script>
+(function () {
+    function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+    setInterval(function () {
+        if (document.visibilityState === 'hidden') return;
+        fetch('/truc-tiep/so-lieu', { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (d) {
+            document.getElementById('liveOnline').textContent = d.online;
+            document.getElementById('liveListen').textContent = d.listening;
+            document.getElementById('liveTop').innerHTML = d.top.length ? d.top.map(function (p) {
+                return '<a class="badge rounded-pill text-bg-light text-decoration-none" href="/diem/' + p.id + '">' + esc(p.name) + ' · ' + p.count + '</a>'; }).join('') : '<span class="small opacity-75">—</span>';
+        }).catch(function () {});
+    }, 10000);
+})();
+</script>
+}

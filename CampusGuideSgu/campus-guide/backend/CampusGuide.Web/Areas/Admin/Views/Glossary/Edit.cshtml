@@ -1,0 +1,18 @@
+@model GlossaryVm
+@{ ViewData["Title"] = Model.MaThuatNgu == 0 ? "Thêm thuật ngữ" : "Sửa thuật ngữ"; List<NgonNgu> langs = ViewBag.Langs; }
+<h3 class="page-title">@ViewData["Title"]</h3>
+<form asp-action="Save" method="post" class="card p-4" style="max-width:640px">
+    <input type="hidden" asp-for="MaThuatNgu" />
+    <div asp-validation-summary="All" class="text-danger small"></div>
+    <label class="form-label">Từ gốc tiếng Việt *</label><input asp-for="TuGoc" class="form-control" />
+    <label class="form-label mt-2">Ghi chú</label><input asp-for="GhiChu" class="form-control" />
+    <h6 class="mt-3">Bản dịch chuẩn</h6>
+    @foreach (var l in langs)
+    {
+        <div class="input-group mb-2">
+            <span class="input-group-text" style="width:140px">@l.Co @l.TenNgonNgu</span>
+            <input name="BanDich[@l.MaNgonNgu]" value="@(Model.BanDich.GetValueOrDefault(l.MaNgonNgu))" class="form-control" placeholder="(để trống = giữ tên tiếng Việt)" />
+        </div>
+    }
+    <div class="mt-3"><button class="btn btn-primary">Lưu</button> <a asp-action="Index" class="btn btn-light">Hủy</a></div>
+</form>

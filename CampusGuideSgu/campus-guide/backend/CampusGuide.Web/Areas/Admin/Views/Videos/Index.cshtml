@@ -1,0 +1,30 @@
+@model List<Video>
+@{ ViewData["Title"] = "Video & trực tiếp"; }
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h3 class="page-title mb-0">Video &amp; phát trực tiếp</h3>
+    <a asp-action="Create" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Thêm video</a>
+</div>
+<p class="text-muted small">Hiển thị ở trang người dùng <a href="/truc-tiep" target="_blank">/truc-tiep</a>, trang chủ và trang chi tiết điểm (nếu gắn với điểm). Hỗ trợ YouTube (video thường hoặc livestream), Facebook video, file .mp4.</p>
+<div class="card">
+    <table class="table table-hover mb-0 align-middle">
+        <thead><tr><th style="width:110px"></th><th>Tiêu đề</th><th>Loại</th><th>Gắn với điểm</th><th>Hiển thị</th><th class="text-end"></th></tr></thead>
+        <tbody>
+        @foreach (var v in Model)
+        {
+            var thumb = VideoEmbed.Thumb(v.DuongDan);
+            <tr>
+                <td>@if (thumb != null) { <img src="@thumb" width="100" class="rounded" loading="lazy" alt="" /> } else { <i class="bi bi-film fs-3 text-muted"></i> }</td>
+                <td class="fw-semibold">@v.TieuDe<div class="small text-muted text-truncate" style="max-width:320px"><a href="@v.DuongDan" target="_blank">@v.DuongDan</a></div></td>
+                <td>@if (v.LaTrucTiep) { <span class="badge bg-danger">Trực tiếp</span> } else { <span class="badge bg-secondary">Video</span> }</td>
+                <td class="small">@(v.Diem?.TenDiem ?? "—")</td>
+                <td>@if (v.HienThi) { <span class="badge bg-success">Hiện</span> } else { <span class="badge bg-light text-dark">Ẩn</span> }</td>
+                <td class="text-end text-nowrap">
+                    <a class="btn btn-sm btn-outline-secondary" asp-action="Edit" asp-route-id="@v.MaVideo"><i class="bi bi-pencil"></i></a>
+                    <form method="post" asp-action="Delete" asp-route-id="@v.MaVideo" class="d-inline" onsubmit="return confirm('Xoá video này?')"><button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button></form>
+                </td>
+            </tr>
+        }
+        @if (Model.Count == 0) { <tr><td colspan="6" class="text-center text-muted py-4">Chưa có video nào.</td></tr> }
+        </tbody>
+    </table>
+</div>

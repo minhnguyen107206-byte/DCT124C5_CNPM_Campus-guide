@@ -1,0 +1,38 @@
+@model LanguageVm
+@{ ViewData["Title"] = "Thêm ngôn ngữ"; List<(string Code, string Voice, string Name, string Flag)> cat = ViewBag.Catalog; }
+<h3 class="page-title">Thêm ngôn ngữ</h3>
+<form asp-action="Create" method="post" class="card p-4" style="max-width:560px">
+    <div asp-validation-summary="All" class="text-danger small"></div>
+    <label class="form-label">Ngôn ngữ</label>
+    <select asp-for="MaNgonNgu" class="form-select" id="lang">
+        <option value="">-- Chọn --</option>
+        @foreach (var c in cat) { <option value="@c.Code" data-name="@c.Name" data-flag="@c.Flag">@c.Flag @c.Name (@c.Code)</option> }
+    </select>
+    <div class="row g-2 mt-1">
+        <div class="col-8"><label class="form-label">Tên hiển thị</label><input asp-for="TenNgonNgu" class="form-control" /></div>
+        <div class="col-4"><label class="form-label">Cờ</label><input asp-for="Co" class="form-control" /></div>
+    </div>
+    <label class="form-label mt-2">Giọng đọc (giọng của thiết bị) <span id="vstatus" class="small text-muted"></span></label>
+    <select asp-for="TenGiongAPI" class="form-select" id="voice"></select>
+    <input type="hidden" asp-for="GioiTinh" id="gender" />
+    <div class="mt-3"><button class="btn btn-primary">Lưu</button> <a asp-action="Index" class="btn btn-light">Hủy</a></div>
+</form>
+@section Scripts {
+<script>
+const lang = document.getElementById('lang'), voice = document.getElementById('voice'), st = document.getElementById('vstatus');
+lang.addEventListener('change', async () => {
+    const o = lang.selectedOptions[0];
+    document.getElementById('TenNgonNgu').value = o.dataset.name || '';
+    document.getElementById('Co').value = o.dataset.flag || '';
+    voice.innerHTML = ''; if (!lang.value) return;
+    st.textContent = 'đang tải...';
+    const res = await fetch('/admin/languages/voices?code=' + encodeURIComponent(lang.value));
+    const data = await res.json();
+    if (data.error || !data.length) { st.textContent = data.error ? 'Lỗi: ' + data.error : 'TTS API không có giọng cho ngôn ngữ này (E1)'; return; }
+    st.textContent = 'app đọc bằng giọng ' + data[0].name + ' của điện thoại';
+    for (const v of data) voice.add(new Option(`${v.name} (${v.gender})`, v.name));
+    document.getElementById('gender').value = data[0].gender;
+});
+voice.addEventListener('change', () => { const t = voice.selectedOptions[0].text; document.getElementById('gender').value = t.includes('(Nam)') ? 'Nam' : 'Nu'; });
+</script>
+}

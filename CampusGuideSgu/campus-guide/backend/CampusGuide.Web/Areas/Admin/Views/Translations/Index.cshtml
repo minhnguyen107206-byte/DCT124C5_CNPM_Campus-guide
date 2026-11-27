@@ -1,0 +1,51 @@
+@model List<NoiDung>
+@{
+    ViewData["Title"] = "Duyệt bản dịch";
+    string st = ViewBag.Status;
+    var tabs = new (string v, string t)[] { (TrangThaiNoiDung.ChoDuyet, "Chờ duyệt"), (TrangThaiNoiDung.CanCapNhat, "Cần cập nhật"),
+        (TrangThaiNoiDung.LoiDich, "Lỗi dịch"), (TrangThaiNoiDung.TuChoi, "Từ chối"), (TrangThaiNoiDung.DaDuyet, "Đã duyệt"), ("all", "Tất cả") };
+}
+<h3 class="page-title">Duyệt bản dịch</h3>
+<ul class="nav nav-pills mb-3">
+    @foreach (var t in tabs)
+    {
+        <li class="nav-item"><a class="nav-link @(st == t.v ? "active" : "")" href="?status=@t.v&lang=@ViewBag.Lang">@t.t</a></li>
+    }
+</ul>
+<form method="get" class="mb-3 d-flex gap-2" style="max-width:360px">
+    <input type="hidden" name="status" value="@st" />
+    <select name="lang" class="form-select" onchange="this.form.submit()">
+        <option value="">Tất cả ngôn ngữ</option>
+        @foreach (NgonNgu l in ViewBag.Langs)
+        {
+            <option value="@l.MaNgonNgu" selected="@(ViewBag.Lang == l.MaNgonNgu)">@l.Co @l.TenNgonNgu</option>
+        }
+    </select>
+</form>
+@if (st == TrangThaiNoiDung.ChoDuyet && Model.Count > 0)
+{
+    <form method="post" asp-action="ApproveAll" class="mb-3"
+          onsubmit="return confirm('Duyệt tất cả @Model.Count bản dịch đang chờ@(string.IsNullOrEmpty((string?)ViewBag.Lang) ? "" : " của ngôn ngữ đang chọn")?');">
+        <input type="hidden" name="lang" value="@ViewBag.Lang" />
+        <button type="submit" class="btn btn-success"><i class="bi bi-check2-all"></i> Duyệt tất cả (@Model.Count)</button>
+    </form>
+}
+<div class="card">
+    <table class="table table-hover mb-0">
+        <thead><tr><th>Điểm</th><th>Ngôn ngữ</th><th>Tiêu đề</th><th>Trạng thái</th><th>Cập nhật</th><th></th></tr></thead>
+        <tbody>
+        @foreach (var n in Model)
+        {
+            <tr>
+                <td class="fw-semibold">@n.Diem?.TenDiem</td>
+                <td>@n.NgonNgu?.Co @n.NgonNgu?.TenNgonNgu</td>
+                <td>@n.TieuDe</td>
+                <td>@Ui.Badge(n.TrangThai)</td>
+                <td class="small">@n.NgayCapNhat.ToLocalTime().ToString("dd/MM HH:mm")</td>
+                <td class="text-end"><a class="btn btn-sm btn-primary" asp-action="Review" asp-route-id="@n.MaNoiDung">Xem</a></td>
+            </tr>
+        }
+        @if (Model.Count == 0) { <tr><td colspan="6" class="text-center text-muted p-4">Không có bản dịch nào.</td></tr> }
+        </tbody>
+    </table>
+</div>

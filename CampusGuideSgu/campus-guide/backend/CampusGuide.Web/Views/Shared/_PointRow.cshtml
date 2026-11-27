@@ -1,0 +1,13 @@
+@model SitePoint
+@{ var p = Model.P; }
+<a class="prow" href="/diem/@p.Id">
+    <div class="ic @(p.Image == null ? Model.Tone : "")">
+        @if (p.Image != null) { <img src="@p.Image" alt="" loading="lazy" decoding="async" width="64" height="64" /> }
+        else { <i class="bi @Model.TypeIcon"></i> }
+    </div>
+    <div class="flex-grow-1 min-w-0">
+        <h3>@p.Title</h3>
+        <p>@p.Type@(string.IsNullOrWhiteSpace(p.Floor) ? "" : " · " + p.Floor)</p>
+    </div>
+    <i class="bi bi-chevron-right text-muted"></i>
+</a>

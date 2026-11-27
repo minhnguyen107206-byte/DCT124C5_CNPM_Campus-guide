@@ -1,0 +1,109 @@
+@model HomeVm
+@{ ViewData["Title"] = S.T("nav_home"); }
+
+<section class="hero">
+    <picture>
+        <source type="image/webp" srcset="/site/img/sgu-800.webp 800w, /site/img/sgu-1200.webp 1200w" sizes="100vw" />
+        <img src="/site/img/sgu-800.jpg" alt="@S.T("sgu_full")" width="800" height="450" fetchpriority="high" />
+    </picture>
+    <div class="container-xl">
+        <span class="eyebrow"><i class="bi bi-stars"></i> @S.T("hero_eyebrow")</span>
+        <h1>@S.T("hero_title")</h1>
+        <p class="lead">@S.T("hero_lead")</p>
+        <div class="d-flex flex-wrap gap-2 mt-3">
+            <a href="/tour" class="btn btn-light btn-lg rounded-pill px-4"><i class="bi bi-signpost-split"></i> @S.T("start_tour")</a>
+            <a href="/ban-do" class="btn btn-ghost btn-lg rounded-pill px-4"><i class="bi bi-map"></i> @S.T("open_map")</a>
+        </div>
+        <div class="hero-stats">
+            <div><b>@Model.PointCount</b><span>@S.T("stat_points")</span></div>
+            <div><b>@Model.Tours.Count</b><span>@S.T("stat_tours")</span></div>
+            <div><b>@S.Langs.Count</b><span>@S.T("stat_langs")</span></div>
+        </div>
+    </div>
+</section>
+
+<div class="container-xl quick">
+    <div class="quick-grid">
+        <a href="/quet"><i class="bi bi-qr-code-scan tone-orange"></i>@S.T("scan_qr")</a>
+        <a href="/diem"><i class="bi bi-buildings tone-indigo"></i>@S.T("nav_points")</a>
+        <a href="/thong-bao"><i class="bi bi-megaphone tone-pink"></i>@S.T("nav_notices")</a>
+        <a href="/thuat-ngu"><i class="bi bi-journal-text tone-teal"></i>@S.T("nav_glossary")</a>
+    </div>
+</div>
+
+@if (Model.Notices.Any(n => n.Urgent && n.Active))
+{
+    var u = Model.Notices.First(n => n.Urgent && n.Active);
+    <div class="container-xl mt-3">
+        <a href="/thong-bao" class="ncard urgent d-block text-decoration-none">
+            <span class="badge badge-live"><i class="bi bi-exclamation-triangle-fill"></i> @S.T("urgent")</span>
+            <h3 class="text-dark">@u.Title</h3><p>@u.Body</p>
+        </a>
+    </div>
+}
+
+<section class="section">
+    <div class="container-xl">
+        <div class="section-head"><h2><i class="bi bi-fire text-danger"></i> @S.T("featured_points")</h2><a href="/diem">@S.T("see_all") <i class="bi bi-arrow-right"></i></a></div>
+        @if (Model.Featured.Count == 0) { <div class="empty"><i class="bi bi-geo"></i>@S.T("no_points")</div> }
+        <div class="scroller">
+            @foreach (var p in Model.Featured) { <partial name="_PointCard" model="p" /> }
+        </div>
+    </div>
+</section>
+
+<section class="section pt-0">
+    <div class="container-xl">
+        <div class="section-head"><h2><i class="bi bi-signpost-split text-primary"></i> @S.T("hot_tours")</h2><a href="/tour">@S.T("see_all") <i class="bi bi-arrow-right"></i></a></div>
+        @if (Model.Tours.Count == 0) { <div class="empty"><i class="bi bi-signpost"></i>@S.T("no_tours")</div> }
+        <div class="row g-3">
+            @foreach (var t in Model.Tours)
+            {
+                <div class="col-12 col-md-6"><partial name="_TourCard" model="t" /></div>
+            }
+        </div>
+    </div>
+</section>
+
+<section class="section pt-0">
+    <div class="container-xl">
+        <div class="row g-4">
+            <div class="col-lg-6">
+                <div class="section-head"><h2><i class="bi bi-megaphone text-warning"></i> @S.T("latest_notices")</h2><a href="/thong-bao">@S.T("see_all") <i class="bi bi-arrow-right"></i></a></div>
+                @if (Model.Notices.Count == 0) { <div class="card-cg empty"><i class="bi bi-bell-slash"></i>@S.T("no_notices")</div> }
+                <div class="d-grid gap-2">
+                    @foreach (var n in Model.Notices) { <partial name="_NoticeCard" model="n" /> }
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="section-head"><h2><i class="bi bi-broadcast text-danger"></i> @S.T("nav_live")</h2><a href="/truc-tiep">@S.T("see_all") <i class="bi bi-arrow-right"></i></a></div>
+                @if (Model.Live != null)
+                {
+                    <div class="vcard">
+                        <partial name="_VideoFrame" model="Model.Live" />
+                        <div class="p-3"><h3 class="h6 fw-bold mb-1">@Model.Live.TieuDe</h3><p class="small text-muted mb-0">@Model.Live.MoTa</p></div>
+                    </div>
+                }
+                else
+                {
+                    <a href="/truc-tiep" class="live-stat d-block text-decoration-none">
+                        <div class="small opacity-75"><span class="dot-live"></span>@S.T("visitors_now")</div>
+                        <div class="mt-1">@S.T("live_hint")</div>
+                    </a>
+                }
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="section pt-0">
+    <div class="container-xl">
+        <div class="card-cg p-4 d-md-flex align-items-center gap-4">
+            <div class="flex-grow-1">
+                <h2 class="h5 fw-800 mb-1">@S.T("cta_title")</h2>
+                <p class="text-muted mb-3 mb-md-0">@S.T("cta_text")</p>
+            </div>
+            <a class="btn btn-scan btn-lg px-4" href="/quet"><i class="bi bi-qr-code-scan"></i> @S.T("scan_qr")</a>
+        </div>
+    </div>
+</section>

@@ -1,0 +1,25 @@
+@model SitePoint
+@{ var p = Model.P; }
+<a class="pcard" href="/diem/@p.Id">
+    <div class="thumb">
+        @if (p.Image != null)
+        {
+            <img src="@p.Image" alt="@p.Title" loading="lazy" decoding="async" width="400" height="250" class="lazy-fade" />
+        }
+        else
+        {
+            <div class="ph @Model.Tone"><i class="bi @Model.TypeIcon"></i></div>
+        }
+        <span class="tag"><i class="bi @Model.TypeIcon"></i> @p.Type</span>
+    </div>
+    <div class="body">
+        <h3>@p.Title</h3>
+        <p>@p.Text</p>
+        <div class="meta">
+            @if (!string.IsNullOrWhiteSpace(p.Floor)) { <span><i class="bi bi-layers"></i> @p.Floor</span> }
+            @if (p.Rating != null) { <span><i class="bi bi-star-fill text-warning"></i> @p.Rating (@p.RatingCount)</span> }
+            @if (Model.Popularity > 0) { <span><i class="bi bi-fire text-danger"></i> @Model.Popularity</span> }
+            @if (p.AudioSeconds > 0) { <span><i class="bi bi-headphones"></i> @(Math.Max(1, p.AudioSeconds / 60)) @S.T("min")</span> }
+        </div>
+    </div>
+</a>

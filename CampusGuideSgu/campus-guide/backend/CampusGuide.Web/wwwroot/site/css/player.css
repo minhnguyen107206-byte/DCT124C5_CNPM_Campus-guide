@@ -1,0 +1,46 @@
+/* CampusGuide SGU – trình phát thuyết minh (player.js). Dùng cho /diem/{id}, /diem/qr/{code} và /q/{code}. */
+.cg-player {
+  --cgp-c1: var(--cg-primary, #2563eb);
+  --cgp-c2: var(--cg-violet, #7c3aed);
+  background: #fff; border-radius: 18px; padding: 14px 16px 12px; margin: 0 0 16px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, .08), 0 1px 3px rgba(15, 23, 42, .06);
+  border: 1px solid rgba(37, 99, 235, .12); color: #0f172a; user-select: none; -webkit-user-select: none;
+}
+.cg-player.playing { border-color: rgba(37, 99, 235, .35); }
+.cgp-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.cgp-title { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; color: var(--cgp-c1); font-size: .95rem; }
+.cgp-time { font-variant-numeric: tabular-nums; color: #64748b; font-size: .85rem; white-space: nowrap; }
+
+.cgp-seek { -webkit-appearance: none; appearance: none; width: 100%; height: 28px; background: transparent; margin: 0; cursor: pointer; --p: 0%; }
+.cgp-seek:focus { outline: none; }
+.cgp-seek::-webkit-slider-runnable-track { height: 6px; border-radius: 6px; background: linear-gradient(90deg, var(--cgp-c1) var(--p), #e2e8f0 var(--p)); }
+.cgp-seek::-moz-range-track { height: 6px; border-radius: 6px; background: #e2e8f0; }
+.cgp-seek::-moz-range-progress { height: 6px; border-radius: 6px; background: var(--cgp-c1); }
+.cgp-seek::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; margin-top: -6px; border-radius: 50%; background: #fff; border: 3px solid var(--cgp-c1); box-shadow: 0 2px 6px rgba(15, 23, 42, .25); }
+.cgp-seek::-moz-range-thumb { width: 14px; height: 14px; border-radius: 50%; background: #fff; border: 3px solid var(--cgp-c1); box-shadow: 0 2px 6px rgba(15, 23, 42, .25); }
+.cgp-seek:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 4px rgba(37, 99, 235, .25); }
+
+.cgp-ctrls { display: grid; grid-template-columns: 1fr auto auto auto 1fr; align-items: center; gap: 14px; margin-top: 4px; }
+.cgp-btn, .cgp-main, .cgp-rate { border: 0; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; -webkit-tap-highlight-color: transparent; }
+.cgp-btn { width: 46px; height: 46px; border-radius: 50%; background: #eef2ff; color: var(--cgp-c1); transition: background .15s, transform .1s; }
+.cgp-btn:hover { background: #e0e7ff; }
+.cgp-main { width: 60px; height: 60px; border-radius: 50%; color: #fff; background: linear-gradient(135deg, var(--cgp-c1), var(--cgp-c2)); box-shadow: 0 8px 20px rgba(37, 99, 235, .35); transition: transform .1s; }
+.cgp-main svg { width: 28px; height: 28px; }
+.cgp-btn:active, .cgp-main:active { transform: scale(.93); }
+.cgp-btn:focus-visible, .cgp-main:focus-visible, .cgp-rate:focus-visible { outline: 3px solid rgba(37, 99, 235, .4); outline-offset: 2px; }
+.cgp-rate { justify-self: start; min-width: 52px; height: 34px; padding: 0 10px; border-radius: 17px; background: #f1f5f9; color: #334155; font-weight: 700; font-size: .9rem; font-variant-numeric: tabular-nums; }
+.cgp-pos { justify-self: end; color: #64748b; font-size: .82rem; white-space: nowrap; }
+.cgp-hint { margin-top: 8px; text-align: center; color: #94a3b8; font-size: .78rem; }
+.cgp-unsupported { color: #9a3412; background: #fff7ed; border-radius: 12px; padding: 10px 12px; }
+
+/* Câu đang đọc trong bài – chạm vào câu nào nghe từ câu đó */
+.cgp-text .cgp-s { cursor: pointer; border-radius: 4px; transition: background .2s, color .2s; }
+.cgp-text .cgp-s:hover { background: rgba(37, 99, 235, .07); }
+.cgp-text .cgp-s.on { background: rgba(250, 204, 21, .35); color: #0f172a; box-shadow: 0 0 0 2px rgba(250, 204, 21, .35); }
+
+@media (max-width: 380px) {
+  .cgp-ctrls { gap: 8px; }
+  .cgp-btn { width: 42px; height: 42px; }
+  .cgp-pos { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { .cgp-btn, .cgp-main, .cgp-text .cgp-s { transition: none; } }

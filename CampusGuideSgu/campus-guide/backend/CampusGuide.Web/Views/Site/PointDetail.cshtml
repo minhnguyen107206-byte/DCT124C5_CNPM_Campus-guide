@@ -1,0 +1,133 @@
+@model PointDetailVm
+@{
+    var sp = Model.Point; var p = sp.P;
+    ViewData["Title"] = p.Title;
+    var inv = System.Globalization.CultureInfo.InvariantCulture;
+    var gmaps = $"https://www.google.com/maps/dir/?api=1&destination={p.Lat.ToString(inv)},{p.Lng.ToString(inv)}&travelmode=walking";
+}
+@section Head {
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+    <link rel="stylesheet" href="~/site/css/player.css" asp-append-version="true" />
+}
+<span id="presence" hidden data-page="web:diem:@p.Id" data-point="@p.Id" data-lang="@S.Lang"></span>
+
+<div class="container-xl px-0 px-lg-3">
+    <div class="detail-hero @(p.Image == null ? sp.Tone : "")">
+        @if (p.Image != null) { <img src="@p.Image" alt="@p.Title" fetchpriority="high" decoding="async" /> }
+        else { <div class="ph"><i class="bi @sp.TypeIcon"></i></div> }
+        <a class="back" href="/diem" aria-label="@S.T("back")"><i class="bi bi-arrow-left"></i></a>
+    </div>
+</div>
+
+<div class="detail-card">
+<div class="container-xl">
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <div class="d-flex flex-wrap gap-2 align-items-center">
+                <span class="badge badge-soft"><i class="bi @sp.TypeIcon"></i> @p.Type</span>
+                @if (sp.Popularity > 0) { <span class="badge badge-hot"><i class="bi bi-fire"></i> @sp.Popularity @S.T("visits")</span> }
+            </div>
+            <h1 class="detail-title">@p.Title</h1>
+            @if (p.Title != p.Name) { <div class="text-muted small mb-2">@p.Name</div> }
+            <div class="facts mb-3">
+                @if (!string.IsNullOrWhiteSpace(p.Floor)) { <span><i class="bi bi-layers text-primary"></i> @p.Floor</span> }
+                @if (!string.IsNullOrWhiteSpace(p.Hours)) { <span><i class="bi bi-clock text-primary"></i> @p.Hours</span> }
+                @if (p.Rating != null) { <span><i class="bi bi-star-fill text-warning"></i> @p.Rating · @p.RatingCount @S.T("reviews")</span> }
+                @if (p.AudioSeconds > 0) { <span><i class="bi bi-headphones text-primary"></i> ≈@(Math.Max(1, (int)Math.Round(p.AudioSeconds / 60.0))) @S.T("min")</span> }
+            </div>
+
+            @if (p.IsFallback) { <p class="note-soft"><i class="bi bi-translate"></i> @S.T("fallback_note")</p> }
+            @if (sp.Machine) { <p class="note-soft"><i class="bi bi-robot"></i> @S.T("machine_note")</p> }
+
+            @* Trình phát thuyết minh (wwwroot/site/js/player.js): phát / tạm dừng, kéo thanh để tua, câu trước / câu sau
+               (hoặc lùi / tiến 10 giây nếu có file âm thanh), đổi tốc độ; chạm vào một câu trong bài để nghe từ câu đó. *@
+            @if (p.AudioUrl != null || !string.IsNullOrWhiteSpace(p.Text))
+            {
+                <div class="cg-player" data-ui="@S.Lang" data-voice="@SiteContext.Locale(p.Lang)" data-text="#pointText" data-title="@p.Title"
+                     data-src="@p.AudioUrl"></div>
+            }
+            <div class="prose" id="pointText" lang="@p.Lang">@(string.IsNullOrWhiteSpace(p.Text) ? S.T("no_text") : p.Text)</div>
+
+            @if (Model.Videos.Count > 0)
+            {
+                <h2 class="h5 fw-800 mt-4 mb-3"><i class="bi bi-play-btn text-danger"></i> @S.T("videos")</h2>
+                <div class="row g-3">
+                    @foreach (var v in Model.Videos)
+                    {
+                        <div class="col-md-6"><div class="vcard"><partial name="_VideoFrame" model="v" /><div class="p-3 fw-semibold">@v.TieuDe</div></div></div>
+                    }
+                </div>
+            }
+
+            <h2 class="h5 fw-800 mt-4 mb-3" id="danh-gia"><i class="bi bi-star text-warning"></i> @S.T("rate_title")</h2>
+            <div class="card-cg p-3">
+                    <form method="post" asp-antiforgery="true" action="/diem/@p.Id/danh-gia">
+                        <div class="stars mb-2">
+                            @for (int i = 5; i >= 1; i--)
+                            {
+                                <input type="radio" name="stars" id="s@(i)" value="@i" @(Model.MyRating == i ? "checked" : "") required /><label for="s@(i)" aria-label="@i"><i class="bi bi-star-fill"></i></label>
+                            }
+                        </div>
+                        <textarea name="comment" class="form-control mb-2" rows="2" maxlength="500" placeholder="@S.T("comment_ph")"></textarea>
+                        <button class="btn btn-primary rounded-pill px-4">@S.T("send")</button>
+                    </form>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="map-box" id="pmap"></div>
+            <div class="d-flex gap-2 mt-2 mb-3">
+                <a class="btn btn-success flex-fill rounded-pill fw-semibold" href="@gmaps" target="_blank" rel="noopener"><i class="bi bi-sign-turn-right"></i> @S.T("directions")</a>
+                <a class="btn btn-outline-primary rounded-pill" href="/ban-do#@p.Id" title="@S.T("nav_map")"><i class="bi bi-map"></i></a>
+                <button class="btn btn-outline-secondary rounded-pill" type="button" data-share data-copied="✓"><i class="bi bi-share"></i><span class="visually-hidden">@S.T("share")</span></button>
+            </div>
+
+            @if (p.QrCode != null)
+            {
+                <div class="qr-box mb-3">
+                    <img src="/diem/@p.Id/qr.png" alt="QR @p.QrCode" loading="lazy" width="112" height="112" />
+                    <div>
+                        <div class="fw-bold">@S.T("qr_title")</div>
+                        <div class="small text-muted mb-2">@S.T("qr_text")</div>
+                        <code class="small">@p.QrCode</code>
+                    </div>
+                </div>
+            }
+
+            @if (Model.Tours.Count > 0)
+            {
+                <h3 class="h6 fw-800 mt-2">@S.T("in_tours")</h3>
+                <div class="d-grid gap-2 mb-3">
+                    @foreach (var t in Model.Tours)
+                    {
+                        <a class="prow" href="/tour/@t.T.MaTour"><div class="ic tone-purple"><i class="bi bi-signpost-split"></i></div><div class="flex-grow-1"><h3>@t.T.TenTour</h3><p>@t.Stops @S.T("stops") · @t.T.ThoiLuong @S.T("min")</p></div><i class="bi bi-chevron-right text-muted"></i></a>
+                    }
+                </div>
+            }
+
+            @if (Model.Nearby.Count > 0)
+            {
+                <h3 class="h6 fw-800 mt-2">@S.T("nearby")</h3>
+                <div class="d-grid gap-2">
+                    @foreach (var n in Model.Nearby) { <partial name="_PointRow" model="n" /> }
+                </div>
+            }
+        </div>
+    </div>
+</div>
+</div>
+
+@section Scripts {
+<script src="~/site/js/player.js" asp-append-version="true" defer></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin="" defer></script>
+<script>
+window.addEventListener('load', function () {
+    if (!window.L) return;
+    var dest = [@p.Lat.ToString(inv), @p.Lng.ToString(inv)];
+    var map = L.map('pmap', { maxZoom: 21, scrollWheelZoom: false }).setView(dest, 18);
+    L.tileLayer('https://mt{s}.google.com/vt/lyrs=y&hl=@S.Lang&x={x}&y={y}&z={z}', { subdomains: '0123', maxZoom: 21, attribution: '© Google' }).addTo(map);
+    L.marker(dest).addTo(map);
+    L.circle(dest, { radius: @p.Radius, color: '#2563eb', weight: 1, fillOpacity: .12 }).addTo(map);
+});
+</script>
+}

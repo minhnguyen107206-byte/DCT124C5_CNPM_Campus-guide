@@ -1,0 +1,24 @@
+@model Video
+@{
+    var yt = VideoEmbed.YouTubeId(Model.DuongDan);
+}
+<div class="vframe">
+    @if (yt != null)
+    {
+        <img src="https://i.ytimg.com/vi/@yt/hqdefault.jpg" alt="" loading="lazy" decoding="async" width="480" height="360" />
+        <button type="button" class="play" data-embed="https://www.youtube-nocookie.com/embed/@yt?autoplay=1&rel=0" data-title="@Model.TieuDe" aria-label="@S.T("play")"><i class="bi bi-play-circle-fill"></i></button>
+    }
+    else if (VideoEmbed.IsFile(Model.DuongDan))
+    {
+        <video src="@Model.DuongDan" controls preload="none" playsinline></video>
+    }
+    else if (VideoEmbed.IsFacebook(Model.DuongDan))
+    {
+        <button type="button" class="play tone-indigo" data-embed="@VideoEmbed.FacebookEmbed(Model.DuongDan)" data-title="@Model.TieuDe" aria-label="@S.T("play")"><i class="bi bi-facebook"></i></button>
+    }
+    else
+    {
+        <a class="play tone-slate text-decoration-none" href="@Model.DuongDan" target="_blank" rel="noopener"><i class="bi bi-box-arrow-up-right"></i></a>
+    }
+    @if (Model.LaTrucTiep) { <span class="badge badge-live position-absolute" style="left:10px;top:10px"><span class="dot-live"></span>LIVE</span> }
+</div>

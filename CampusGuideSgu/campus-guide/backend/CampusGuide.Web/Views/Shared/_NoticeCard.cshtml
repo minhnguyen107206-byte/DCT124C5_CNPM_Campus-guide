@@ -1,0 +1,10 @@
+@model SiteNotice
+<div class="ncard @(Model.Urgent ? "urgent" : "") @(!Model.Active ? "upcoming" : "")">
+    <div class="d-flex flex-wrap gap-1 align-items-center small">
+        @if (Model.Urgent) { <span class="badge badge-live"><i class="bi bi-exclamation-triangle-fill"></i> @S.T("urgent")</span> }
+        @if (Model.Active) { <span class="badge badge-ok">@S.T("happening")</span> } else { <span class="badge badge-soft">@S.T("upcoming")</span> }
+        <span class="text-muted ms-auto"><i class="bi bi-calendar-event"></i> @SiteContext.Local(Model.Start, "dd/MM HH:mm") → @SiteContext.Local(Model.End, "dd/MM HH:mm")</span>
+    </div>
+    <h3>@Model.Title</h3>
+    <p>@Model.Body</p>
+</div>

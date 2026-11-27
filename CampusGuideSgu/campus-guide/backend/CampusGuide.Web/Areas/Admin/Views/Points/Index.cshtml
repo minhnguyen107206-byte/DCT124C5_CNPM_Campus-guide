@@ -1,0 +1,77 @@
+@model List<Diem>
+@{
+    ViewData["Title"] = "Điểm thuyết minh";
+    Dictionary<int, List<string>> inTours = ViewBag.InTours ?? new Dictionary<int, List<string>>();
+}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h3 class="page-title mb-0">Điểm thuyết minh</h3>
+    <div>
+        <form method="post" asp-action="TranslateAll" class="d-inline" onsubmit="return confirm('Dịch tất cả điểm bằng MyMemory? Có thể mất vài phút.')">
+            <button class="btn btn-outline-primary"><i class="bi bi-translate"></i> Dịch tất cả điểm</button>
+        </form>
+        <a asp-action="Create" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Thêm điểm</a>
+    </div>
+</div>
+<form method="get" class="card p-3 mb-3">
+    <div class="row g-2">
+        <div class="col-md-5"><input name="q" value="@ViewBag.Q" class="form-control" placeholder="Tìm theo tên điểm..." /></div>
+        <div class="col-md-3"><select name="loai" class="form-select" asp-items="ViewBag.Loai"><option value="">Tất cả loại</option></select></div>
+        <div class="col-md-2">
+            <select name="trangThai" class="form-select">
+                <option value="">Đang dùng</option>
+                <option value="@TrangThaiDiem.Nhap" selected="@(ViewBag.TrangThai == TrangThaiDiem.Nhap)">Nháp</option>
+                <option value="@TrangThaiDiem.DaXuatBan" selected="@(ViewBag.TrangThai == TrangThaiDiem.DaXuatBan)">Đã xuất bản</option>
+                <option value="@TrangThaiDiem.DaAn" selected="@(ViewBag.TrangThai == TrangThaiDiem.DaAn)">Đã xoá</option>
+            </select>
+        </div>
+        <div class="col-md-2"><button class="btn btn-secondary w-100">Lọc</button></div>
+    </div>
+</form>
+<form method="get" asp-action="QrSheet" id="qrForm">
+<div class="card">
+    <table class="table table-hover mb-0">
+        <thead><tr><th style="width:36px"><input type="checkbox" onclick="document.querySelectorAll('.pick').forEach(c=>c.checked=this.checked)" /></th>
+            <th>Tên điểm</th><th>Loại</th><th>Bản dịch</th><th>Trạng thái</th><th>Cập nhật</th><th class="text-end">Thao tác</th></tr></thead>
+        <tbody>
+        @foreach (var d in Model)
+        {
+            var approved = d.NoiDungs.Count(n => n.TrangThai == TrangThaiNoiDung.DaDuyet);
+            var pending = d.NoiDungs.Count(n => n.TrangThai == TrangThaiNoiDung.ChoDuyet);
+            <tr>
+                <td><input type="checkbox" class="pick" name="ids" value="@d.MaDiem" /></td>
+                <td class="fw-semibold">@d.TenDiem<div class="small text-muted">@d.Tang</div></td>
+                <td>@d.LoaiDiem?.TenLoai</td>
+                <td><span class="badge bg-success">@approved duyệt</span> @if (pending > 0) { <span class="badge bg-warning text-dark">@pending chờ</span> }</td>
+                <td>@if (d.TrangThai == TrangThaiDiem.DaAn) { <span class="badge bg-dark">Đã xoá</span> } else { @Ui.Badge(d.TrangThai) }</td>
+                <td class="small">@d.NgayCapNhat.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+                <td class="text-end text-nowrap">
+                    <a class="btn btn-sm btn-outline-secondary" asp-action="Edit" asp-route-id="@d.MaDiem" title="Sửa"><i class="bi bi-pencil"></i></a>
+                    <a class="btn btn-sm btn-outline-primary" asp-action="ContentEdit" asp-route-id="@d.MaDiem" title="Nội dung"><i class="bi bi-file-text"></i></a>
+                    @if (d.TrangThai != TrangThaiDiem.DaAn)
+                    {
+                        <a class="btn btn-sm btn-outline-dark" asp-action="Qr" asp-route-id="@d.MaDiem" title="Mã QR"><i class="bi bi-qr-code"></i></a>
+                        <button class="btn btn-sm btn-outline-success" formmethod="post" formaction="/admin/points/publish/@d.MaDiem?on=@(d.TrangThai != TrangThaiDiem.DaXuatBan)"
+                                title="@(d.TrangThai == TrangThaiDiem.DaXuatBan ? "Gỡ xuất bản" : "Xuất bản")"><i class="bi @(d.TrangThai == TrangThaiDiem.DaXuatBan ? "bi-cloud-slash" : "bi-cloud-upload")"></i></button>
+                        var tours = inTours.GetValueOrDefault(d.MaDiem);
+                        var hoi = tours == null
+                            ? $"Ẩn điểm \"{d.TenDiem}\"?\n\nĐiểm sẽ không hiện trên ứng dụng nhưng vẫn giữ nguyên dữ liệu thống kê và có thể khôi phục trong mục \"Đã xoá\"."
+                            : $"\"{d.TenDiem}\" đang thuộc tour: {string.Join(", ", tours)}.\n\nẨn điểm sẽ GỠ điểm khỏi tour (tour tự tính lại quãng đường, cần xuất bản lại gói offline) nhưng vẫn giữ nguyên thống kê và có thể khôi phục sau. Tiếp tục?";
+                        var hideUrl = $"/admin/points/hide/{d.MaDiem}" + (tours == null ? "" : "?goKhoiTour=true");
+                        <button class="btn btn-sm btn-outline-danger" formmethod="post" formaction="@hideUrl"
+                                data-confirm="@hoi" onclick="return confirm(this.dataset.confirm)" title="Ẩn (xoá mềm)"><i class="bi bi-trash"></i></button>
+                    }
+                    else
+                    {
+                        <button class="btn btn-sm btn-outline-success" formmethod="post" formaction="/admin/points/restore/@d.MaDiem"
+                                title="Khôi phục"><i class="bi bi-arrow-counterclockwise"></i> Khôi phục</button>
+                    }
+                </td>
+            </tr>
+        }
+        @if (Model.Count == 0) { <tr><td colspan="7" class="text-center text-muted p-4">@(ViewBag.TrangThai == TrangThaiDiem.DaAn ? "Không có điểm nào đã xoá." : "Chưa có điểm nào.")</td></tr> }
+        </tbody>
+    </table>
+</div>
+@Html.AntiForgeryToken()
+<button class="btn btn-outline-dark mt-3" formtarget="_blank"><i class="bi bi-printer"></i> In QR các điểm đã chọn</button>
+</form>

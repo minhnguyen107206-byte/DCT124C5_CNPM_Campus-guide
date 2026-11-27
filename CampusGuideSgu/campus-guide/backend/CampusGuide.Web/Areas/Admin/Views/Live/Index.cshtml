@@ -1,0 +1,142 @@
+@model LiveSnapshot
+@{ ViewData["Title"] = "Trực tiếp"; }
+@section Head {
+<style>
+    .live-dot { width: 10px; height: 10px; border-radius: 50%; background: #12b76a; display: inline-block; box-shadow: 0 0 0 0 rgba(18,183,106,.6); animation: pulse 1.6s infinite; }
+    .live-dot.off { background: #f04438; animation: none; }
+    @@keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(18,183,106,.55); } 70% { box-shadow: 0 0 0 10px rgba(18,183,106,0); } 100% { box-shadow: 0 0 0 0 rgba(18,183,106,0); } }
+    .big { font-size: 3.4rem; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; transition: color .3s; }
+    .big.up { color: #12b76a !important; } .big.down { color: #f04438 !important; }
+    .spark { width: 100%; height: 70px; }
+    .chip { display: inline-block; background: #eef2f9; border-radius: 14px; padding: 2px 10px; margin: 2px; font-size: .85rem; }
+    .dev-row.listening td { background: #ecfdf3; }
+    .factor { background: #fffaeb; border: 1px dashed #f79009; color: #b54708; border-radius: 8px; padding: 2px 10px; font-size: .85rem; }
+</style>
+}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <h3 class="page-title mb-0"><span class="live-dot me-2" id="dot"></span>Trực tiếp</h3>
+    <div class="small text-muted">Cập nhật mỗi 2 giây · Quá hạn <b>@Model.HetHanGiay</b>s · <span id="updated">–</span></div>
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-md-6">
+        <div class="card p-4 h-100">
+            <div class="text-muted">Thiết bị đang truy cập</div>    
+            <div class="big text-primary" id="dangTruyCap">@Model.DangTruyCap</div>
+            <div class="small text-muted mt-1">Mở trang nghe thuyết minh</div>
+            <svg class="spark mt-2" id="sparkA" viewBox="0 0 300 70" preserveAspectRatio="none"></svg><div class="small text-muted text-end"></div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card p-4 h-100">
+            <div class="text-muted">Đang nghe thuyết minh</div>
+            <div class="big text-success" id="dangNghe">@Model.DangNghe</div>
+            <div class="small text-muted mt-1">Đang phát / đang đọc thuyết minh ngay lúc này</div>
+            <svg class="spark mt-2" id="sparkB" viewBox="0 0 300 70" preserveAspectRatio="none"></svg><div class="small text-muted text-end"></div>
+        </div>
+    </div>
+</div>
+<div class="mb-3 @(Model.HeSo == 1 ? "d-none" : "")" id="factorBox">
+    <span class="factor">Hệ số hiển thị ×<span id="heSo">@Model.HeSo</span> – số thật: <span id="that">@Model.ThatTruyCap truy cập, @Model.ThatNghe đang nghe</span>
+        (đổi ở <code>PresenceService.HeSoHienThi</code>)</span>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-5">
+        <div class="card p-3 h-100">
+            <h6 class="mb-2">Theo điểm thuyết minh</h6>
+            <table class="table table-sm mb-0">
+                <thead><tr><th>Điểm</th><th class="text-end">Truy cập</th><th class="text-end">Đang nghe</th></tr></thead>
+                <tbody id="byPoint"></tbody>
+            </table>
+            <h6 class="mt-3 mb-1">Theo ngôn ngữ</h6><div id="byLang"></div>
+            <h6 class="mt-3 mb-1">Theo nguồn</h6><div id="bySource"></div>
+        </div>
+    </div>
+    <div class="col-lg-7">
+        <div class="card p-3 h-100">
+            <h6 class="mb-2">Thiết bị đang kết nối</h6>
+            <div class="table-responsive">
+                <table class="table table-sm mb-0">
+                    <thead><tr><th>Mã</th><th>Thiết bị</th><th>Nguồn</th><th>Đang xem</th><th>Ngôn ngữ</th><th>Trạng thái</th><th class="text-end">Ping</th></tr></thead>
+                    <tbody id="devices"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+@section Scripts {
+<script>
+(function () {
+    const $ = id => document.getElementById(id);
+    const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const histA = [], histB = [], MAX = 60;   // 60 mẫu × 2 giây = 2 phút gần nhất
+    const LANG = { vi: '🇻🇳 vi', en: '🇬🇧 en', ja: '🇯🇵 ja', ko: '🇰🇷 ko', 'zh-CN': '🇨🇳 zh' };
+
+    function setBig(el, v) {
+        const old = Number(el.textContent);
+        el.textContent = v;
+        if (!isNaN(old) && old !== v) {
+            el.classList.remove('up', 'down'); void el.offsetWidth;
+            el.classList.add(v > old ? 'up' : 'down');
+            setTimeout(() => el.classList.remove('up', 'down'), 900);
+        }
+    }
+
+    function spark(svg, data, color) {
+        const max = Math.max(1, ...data);
+        const step = 300 / (MAX - 1);
+        const off = MAX - data.length;
+        const pts = data.map((v, i) => `${((off + i) * step).toFixed(1)},${(66 - v / max * 60).toFixed(1)}`).join(' ');
+        svg.innerHTML = data.length < 2 ? '' :
+            `<polyline points="${pts}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linejoin="round"/>`;
+        const cap = svg.nextElementSibling;
+        if (cap) cap.textContent = `2 phút gần nhất · cao nhất ${max}`;
+    }
+
+    function render(d) {
+        setBig($('dangTruyCap'), d.dangTruyCap);
+        setBig($('dangNghe'), d.dangNghe);
+        histA.push(d.dangTruyCap); histB.push(d.dangNghe);
+        if (histA.length > MAX) { histA.shift(); histB.shift(); }
+        spark($('sparkA'), histA, '#2f5597'); spark($('sparkB'), histB, '#12b76a');
+
+        $('factorBox').classList.toggle('d-none', d.heSo === 1);
+        $('heSo').textContent = d.heSo;
+        $('that').textContent = `${d.thatTruyCap} truy cập, ${d.thatNghe} đang nghe`;
+
+        $('byPoint').innerHTML = d.theoDiem.length === 0
+            ? '<tr><td colspan="3" class="text-muted">Chưa có ai.</td></tr>'
+            : d.theoDiem.map(p => `<tr><td>${esc(p.name)}</td><td class="text-end fw-semibold">${p.truyCap}</td><td class="text-end text-success">${p.dangNghe}</td></tr>`).join('');
+        const chips = o => Object.entries(o).map(([k, v]) => `<span class="chip">${esc(LANG[k] || k)}: <b>${v}</b></span>`).join('') || '<span class="text-muted small">–</span>';
+        $('byLang').innerHTML = chips(d.theoNgonNgu);
+        $('bySource').innerHTML = chips(Object.fromEntries(Object.entries(d.theoNguon).map(([k, v]) => [k === 'app' ? '📱 App' : '🌐 Web (QR)', v])));
+
+        $('devices').innerHTML = d.thietBi.length === 0
+            ? '<tr><td colspan="7" class="text-muted">Chưa có thiết bị nào.</td></tr>'
+            : d.thietBi.map(x => `<tr class="dev-row ${x.listening ? 'listening' : ''}">
+                <td><code>${esc(x.id)}</code></td><td>${esc(x.platform)}</td><td>${x.source === 'app' ? '📱 App' : '🌐 Web'}</td>
+                <td>${esc(x.point || '–')}</td><td>${esc(LANG[x.lang] || x.lang || '–')}</td>
+                <td>${x.listening ? '<span class="badge bg-success">🔊 Đang nghe</span>' : '<span class="badge bg-light text-dark border">Đang xem</span>'}</td>
+                <td class="text-end small">${x.giayTruoc}s</td></tr>`).join('');
+        $('updated').textContent = new Date().toLocaleTimeString('vi-VN');
+    }
+
+    async function tick() {
+        try {
+            const r = await fetch('/admin/live/data', { cache: 'no-store' });
+            if (!r.ok) throw new Error(r.status);
+            render(await r.json());
+            $('dot').classList.remove('off');
+        } catch (e) {
+            $('dot').classList.add('off');
+            $('updated').textContent = 'mất kết nối tới máy chủ';
+        }
+    }
+    tick();
+    setInterval(tick, 2000);
+})();
+</script>
+}

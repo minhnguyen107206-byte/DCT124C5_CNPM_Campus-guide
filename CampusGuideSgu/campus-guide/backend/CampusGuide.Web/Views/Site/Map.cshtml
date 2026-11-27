@@ -1,0 +1,107 @@
+@model PointListVm
+@{
+    ViewData["Title"] = S.T("nav_map");
+    ViewData["BodyClass"] = "page-map";
+    var data = Model.Points.Select(x => new
+    {
+        id = x.P.Id, name = x.P.Title, type = x.P.Type, loai = x.MaLoai, lat = x.P.Lat, lng = x.P.Lng,
+        icon = x.TypeIcon, tone = x.Tone, img = x.P.Image, floor = x.P.Floor,
+    });
+    var json = System.Text.Json.JsonSerializer.Serialize(data);
+}
+@section Head {
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+<style>.page-map .cg-footer { display: none; }</style>
+}
+<div class="map-page">
+    <div id="bigmap" aria-label="@S.T("nav_map")"></div>
+    <div class="map-top">
+        <div class="chips" id="mapChips">
+            <button type="button" class="chip @(Model.Loai == null ? "on" : "")" data-loai="">@S.T("all")</button>
+            @foreach (var t in Model.Types)
+            {
+                <button type="button" class="chip @(Model.Loai == t.MaLoai ? "on" : "")" data-loai="@t.MaLoai"><i class="bi @SiteContext.Icon(t.BieuTuong)"></i> @t.TenLoai</button>
+            }
+        </div>
+    </div>
+    <div class="map-fab">
+        <button type="button" id="layerBtn" title="@S.T("map_layer")"><i class="bi bi-layers"></i></button>
+        <button type="button" id="meBtn" title="@S.T("my_location")"><i class="bi bi-crosshair"></i></button>
+        <a class="scan" href="/quet" title="@S.T("scan_qr")"><i class="bi bi-qr-code-scan"></i></a>
+    </div>
+    <div class="map-sheet card-cg p-2" id="sheet">
+        <a class="prow shadow-none p-1" id="sheetLink" href="#">
+            <div class="ic" id="sheetIc"></div>
+            <div class="flex-grow-1 min-w-0"><h3 id="sheetName"></h3><p id="sheetMeta"></p></div>
+            <span class="btn btn-primary btn-sm rounded-pill">@S.T("details")</span>
+        </a>
+    </div>
+    <div class="note-soft position-absolute d-none" id="geoMsg" style="left:12px;right:70px;bottom:96px;z-index:600"></div>
+</div>
+@section Scripts {
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin="" defer></script>
+<script>
+window.addEventListener('load', function () {
+    if (!window.L) return;
+    var pts = @Html.Raw(json);
+    var T = { denied: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(S.T("geo_denied"))), insecure: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(S.T("geo_insecure"))), you: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(S.T("you_here"))) };
+    var map = L.map('bigmap', { maxZoom: 21, zoomControl: false }).setView([10.7598, 106.6823], 18);
+    L.control.zoom({ position: 'bottomleft' }).addTo(map);
+    var sat = L.tileLayer('https://mt{s}.google.com/vt/lyrs=y&hl=@S.Lang&x={x}&y={y}&z={z}', { subdomains: '0123', maxZoom: 21, attribution: '© Google' });
+    var road = L.tileLayer('https://mt{s}.google.com/vt/lyrs=m&hl=@S.Lang&x={x}&y={y}&z={z}', { subdomains: '0123', maxZoom: 21, attribution: '© Google' });
+    sat.addTo(map); var isSat = true;
+    document.getElementById('layerBtn').addEventListener('click', function () {
+        if (isSat) { map.removeLayer(sat); road.addTo(map); } else { map.removeLayer(road); sat.addTo(map); } isSat = !isSat;
+    });
+
+    var colors = { 'tone-blue': '#3b82f6', 'tone-indigo': '#6366f1', 'tone-purple': '#8b5cf6', 'tone-teal': '#14b8a6', 'tone-orange': '#f97316', 'tone-slate': '#475569', 'tone-gray': '#64748b', 'tone-green': '#16a34a', 'tone-pink': '#ec4899' };
+    var sheet = document.getElementById('sheet');
+    var markers = pts.map(function (p) {
+        var icon = L.divIcon({ className: '', iconSize: [34, 34], iconAnchor: [17, 34],
+            html: '<div class="pin" style="background:' + (colors[p.tone] || '#2563eb') + '"><i class="bi ' + p.icon + '"></i></div>' });
+        var m = L.marker([p.lat, p.lng], { icon: icon, title: p.name }).addTo(map);
+        m.on('click', function () { open(p); });
+        m.p = p;
+        return m;
+    });
+    function open(p) {
+        document.getElementById('sheetLink').href = '/diem/' + p.id;
+        document.getElementById('sheetName').textContent = p.name;
+        document.getElementById('sheetMeta').textContent = p.type + (p.floor ? ' · ' + p.floor : '');
+        var ic = document.getElementById('sheetIc');
+        ic.className = 'ic ' + (p.img ? '' : p.tone);
+        ic.innerHTML = p.img ? '<img src="' + p.img + '" alt="" loading="lazy">' : '<i class="bi ' + p.icon + '"></i>';
+        sheet.classList.add('show');
+        map.panTo([p.lat, p.lng]);
+    }
+    map.on('click', function () { sheet.classList.remove('show'); });
+    function filter(loai) {
+        var vis = [];
+        markers.forEach(function (m) { var ok = !loai || String(m.p.loai) === String(loai); if (ok) { m.addTo(map); vis.push(m.getLatLng()); } else map.removeLayer(m); });
+        if (vis.length) map.fitBounds(L.latLngBounds(vis).pad(0.15), { maxZoom: 19 });
+    }
+    document.querySelectorAll('#mapChips .chip').forEach(function (c) {
+        c.addEventListener('click', function () {
+            document.querySelectorAll('#mapChips .chip').forEach(function (x) { x.classList.remove('on'); });
+            c.classList.add('on'); sheet.classList.remove('show'); filter(c.dataset.loai);
+        });
+    });
+    filter('@Model.Loai');
+    var hash = parseInt(location.hash.slice(1), 10);
+    var hit = pts.find(function (p) { return p.id === hash; });
+    if (hit) { map.setView([hit.lat, hit.lng], 19); open(hit); }
+
+    var me = null, msg = document.getElementById('geoMsg');
+    document.getElementById('meBtn').addEventListener('click', function () {
+        if (!window.isSecureContext || !navigator.geolocation) { msg.textContent = T.insecure; msg.classList.remove('d-none'); return; }
+        navigator.geolocation.getCurrentPosition(function (pos) {
+            msg.classList.add('d-none');
+            var ll = [pos.coords.latitude, pos.coords.longitude];
+            if (!me) me = L.circleMarker(ll, { radius: 9, color: '#fff', weight: 3, fillColor: '#2563eb', fillOpacity: 1 }).addTo(map).bindTooltip(T.you);
+            else me.setLatLng(ll);
+            map.setView(ll, 19);
+        }, function () { msg.textContent = T.denied; msg.classList.remove('d-none'); }, { enableHighAccuracy: true, timeout: 15000 });
+    });
+});
+</script>
+}

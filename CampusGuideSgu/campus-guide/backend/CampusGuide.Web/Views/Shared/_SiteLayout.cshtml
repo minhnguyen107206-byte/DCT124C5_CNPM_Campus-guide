@@ -1,0 +1,128 @@
+@{
+    var path = Context.Request.Path.Value ?? "/";
+    var here = path + Context.Request.QueryString;
+    string On(string prefix) => (prefix == "/" ? path == "/" : path.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)) ? "active" : "";
+    var title = ViewData["Title"] as string;
+    var cur = S.Current;
+}
+<!doctype html>
+<html lang="@S.Lang">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#2563eb" />
+    <meta name="description" content="@S.T("meta_desc")" />
+    <title>@(string.IsNullOrEmpty(title) ? "CampusGuide SGU" : title + " · CampusGuide SGU")</title>
+    <link rel="icon" href="~/site/img/logo.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+    <link rel="stylesheet" href="~/site/css/site.css" asp-append-version="true" />
+    @await RenderSectionAsync("Head", required: false)
+</head>
+<body class="@(ViewData["BodyClass"] ?? "")">
+<a class="visually-hidden-focusable skip" href="#main">@S.T("skip")</a>
+
+<header class="cg-header">
+    <nav class="container-xl d-flex align-items-center gap-2">
+        <a class="cg-brand me-auto me-xl-3" href="/">
+            <img src="~/site/img/SGU-LOGO.svg" width="34" height="34" alt="" />
+            <span><b>CampusGuide</b><small>@S.T("sgu_short")</small></span>
+        </a>
+        <div class="cg-nav d-none d-xl-flex me-auto">
+            <a class="@On("/")" href="/">@S.T("nav_home")</a>
+            <a class="@On("/diem")" href="/diem">@S.T("nav_points")</a>
+            <a class="@On("/ban-do")" href="/ban-do">@S.T("nav_map")</a>
+            <a class="@On("/tour")" href="/tour">@S.T("nav_tours")</a>
+            <a class="@On("/thong-bao")" href="/thong-bao">@S.T("nav_notices")</a>
+            <a class="@On("/truc-tiep")" href="/truc-tiep">@S.T("nav_live")</a>
+            <a class="@On("/thuat-ngu")" href="/thuat-ngu">@S.T("nav_glossary")</a>
+        </div>
+        <a class="btn btn-scan d-none d-xl-inline-flex" href="/quet"><i class="bi bi-qr-code-scan"></i> @S.T("scan_qr")</a>
+        <div class="dropdown">
+            <button class="btn btn-icon" data-bs-toggle="dropdown" aria-label="@S.T("language")" aria-expanded="false">
+                <span class="flag">@(cur?.Co ?? "🌐")</span><span class="d-none d-sm-inline small fw-semibold ms-1">@S.Lang.ToUpperInvariant()</span>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end shadow border-0">
+                <li><h6 class="dropdown-header">@S.T("language")</h6></li>
+                @foreach (var l in S.Langs)
+                {
+                    <li><a class="dropdown-item @(l.MaNgonNgu == S.Lang ? "active" : "")" href="/ngon-ngu/@l.MaNgonNgu?returnUrl=@Uri.EscapeDataString(here)">@l.Co @l.TenNgonNgu</a></li>
+                }
+            </ul>
+        </div>
+    </nav>
+</header>
+
+<main id="main" class="cg-main">
+    @RenderBody()
+</main>
+
+<footer class="cg-footer">
+    <div class="container-xl">
+        <div class="row g-4">
+            <div class="col-md-5">
+                <a class="cg-brand mb-2" href="/"><img src="~/site/img/SGU-LOGO.svg" width="30" height="30" alt="" /><span><b>CampusGuide</b><small>@S.T("sgu_short")</small></span></a>
+                <p class="small mb-1">@S.T("footer_about")</p>
+                <p class="small mb-0"><i class="bi bi-geo-alt"></i> 273 An Dương Vương, Phường Chợ Quán, TP. Hồ Chí Minh</p>
+            </div>
+            <div class="col-6 col-md-3">
+                <h6>@S.T("explore")</h6>
+                <a href="/diem">@S.T("nav_points")</a><a href="/ban-do">@S.T("nav_map")</a><a href="/tour">@S.T("nav_tours")</a><a href="/quet">@S.T("scan_qr")</a>
+            </div>
+            <div class="col-6 col-md-4">
+                <h6>@S.T("info")</h6>
+                <a href="/thong-bao">@S.T("nav_notices")</a><a href="/truc-tiep">@S.T("nav_live")</a><a href="/thuat-ngu">@S.T("nav_glossary")</a><a href="/gioi-thieu">@S.T("about")</a>
+            </div>
+        </div>
+        <div class="small opacity-75 mt-4">© @DateTime.Now.Year CampusGuide · @S.T("sgu_full")</div>
+    </div>
+</footer>
+
+@* Thanh điều hướng dưới cùng cho điện thoại *@
+<nav class="cg-tabbar d-xl-none" aria-label="@S.T("menu")">
+    <a class="@On("/")" href="/"><i class="bi bi-house-door"></i><span>@S.T("nav_home")</span></a>
+    <a class="@On("/ban-do")" href="/ban-do"><i class="bi bi-map"></i><span>@S.T("nav_map")</span></a>
+    <a class="tab-scan @On("/quet")" href="/quet" aria-label="@S.T("scan_qr")"><i class="bi bi-qr-code-scan"></i></a>
+    <a class="@On("/tour")" href="/tour"><i class="bi bi-signpost-split"></i><span>@S.T("nav_tours")</span></a>
+    <button type="button" data-bs-toggle="offcanvas" data-bs-target="#cgMenu" aria-controls="cgMenu"><i class="bi bi-grid"></i><span>@S.T("more")</span></button>
+</nav>
+
+<div class="offcanvas offcanvas-bottom cg-sheet" tabindex="-1" id="cgMenu" aria-label="@S.T("menu")">
+    <div class="offcanvas-header pb-0">
+        <h5 class="offcanvas-title fw-bold">@S.T("menu")</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="@S.T("close")"></button>
+    </div>
+    <div class="offcanvas-body">
+        <div class="sheet-grid">
+            <a href="/diem"><i class="bi bi-buildings tone-indigo"></i>@S.T("nav_points")</a>
+            <a href="/thong-bao"><i class="bi bi-megaphone tone-orange"></i>@S.T("nav_notices")</a>
+            <a href="/truc-tiep"><i class="bi bi-broadcast tone-pink"></i>@S.T("nav_live")</a>
+            <a href="/thuat-ngu"><i class="bi bi-journal-text tone-teal"></i>@S.T("nav_glossary")</a>
+            <a href="/quet"><i class="bi bi-qr-code-scan tone-orange"></i>@S.T("scan_qr")</a>
+            <a href="/gioi-thieu"><i class="bi bi-info-circle tone-slate"></i>@S.T("about")</a>
+        </div>
+        <h6 class="mt-4 mb-2 small text-uppercase text-muted fw-bold">@S.T("language")</h6>
+        <div class="d-flex flex-wrap gap-2">
+            @foreach (var l in S.Langs)
+            {
+                <a class="chip @(l.MaNgonNgu == S.Lang ? "on" : "")" href="/ngon-ngu/@l.MaNgonNgu?returnUrl=@Uri.EscapeDataString(here)">@l.Co @l.TenNgonNgu</a>
+            }
+        </div>
+    </div>
+</div>
+
+@if (TempData["toast"] is string ok || TempData["toastErr"] is string)
+{
+    var err = TempData["toastErr"] as string;
+    <div class="cg-toast @(err != null ? "err" : "")" role="status"><i class="bi @(err != null ? "bi-exclamation-circle" : "bi-check-circle")"></i> @(err ?? TempData["toast"] as string ?? "")</div>
+}
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" defer></script>
+<script src="~/site/js/site.js" asp-append-version="true" defer></script>
+@await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

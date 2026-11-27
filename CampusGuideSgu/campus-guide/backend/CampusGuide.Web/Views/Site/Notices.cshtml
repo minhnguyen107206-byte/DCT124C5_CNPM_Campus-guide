@@ -1,0 +1,11 @@
+@model List<SiteNotice>
+@{ ViewData["Title"] = S.T("nav_notices"); var active = Model.Where(n => n.Active).ToList(); var soon = Model.Where(n => !n.Active).ToList(); }
+<div class="container-xl">
+    <div class="page-head"><h1>@S.T("nav_notices")</h1><p>@S.T("notices_lead")</p></div>
+    <h2 class="h6 fw-800 mt-4 mb-2 text-uppercase small text-muted">@S.T("happening") (@active.Count)</h2>
+    @if (active.Count == 0) { <div class="card-cg empty py-4"><i class="bi bi-bell-slash"></i>@S.T("no_notices")</div> }
+    <div class="row g-3">@foreach (var n in active) { <div class="col-md-6"><partial name="_NoticeCard" model="n" /></div> }</div>
+    <h2 class="h6 fw-800 mt-4 mb-2 text-uppercase small text-muted">@S.T("upcoming_events") (@soon.Count)</h2>
+    @if (soon.Count == 0) { <div class="card-cg empty py-4"><i class="bi bi-calendar2-x"></i>@S.T("no_upcoming")</div> }
+    <div class="row g-3">@foreach (var n in soon) { <div class="col-md-6"><partial name="_NoticeCard" model="n" /></div> }</div>
+</div>
